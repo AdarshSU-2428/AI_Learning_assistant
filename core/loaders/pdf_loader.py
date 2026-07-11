@@ -24,5 +24,3 @@ class PDFLoader(BaseLoader) :
         except Exception as e :
             self.logger.error(f"Error while reading PDF: {e}")
             raise
-
-

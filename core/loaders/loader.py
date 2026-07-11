@@ -38,4 +38,3 @@ class BaseLoader(ABC) :
 
     def extract_text(self) :
         pass
-
