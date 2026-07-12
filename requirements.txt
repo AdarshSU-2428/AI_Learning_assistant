@@ -1,3 +1,7 @@
 pypdf
 python-pptx
 python-docx
+langchain-core
+langchain-text-splitters
+chromadb
+sentence-transformers
