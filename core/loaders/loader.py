@@ -1,13 +1,17 @@
-from abc import ABC, abstractclassmethod
+from abc import ABC, abstractmethod
 from pathlib import Path
 from utils.logger import get_logger
 
 class BaseLoader(ABC) :
-    def __init__(self, file_path) :
-        self.file_path = Path(file_path)
+    def __init__(self, file_path=None) :
         self.logger = get_logger(__name__)
+        if file_path is not None:
+            self.file_path = Path(file_path)
 
     def validate_file(self) :
+        if not hasattr(self, "file_path"):
+            raise ValueError("file_path has not been set.")
+
         if not self.file_path.exists() :
             self.logger.error(f"File not found: {self.file_path}")
             raise FileNotFoundError(f"File not found: {self.file_path}")
@@ -23,7 +27,13 @@ class BaseLoader(ABC) :
             "file_path" : str(self.file_path)
         }
 
-    def load(self) :
+    def load(self, file_path=None) :
+        if file_path is not None:
+            self.file_path = Path(file_path)
+
+        if not hasattr(self, "file_path"):
+            raise ValueError("file_path must be provided either in __init__ or load()")
+
         self.logger.info(f"Loading file: {self.file_path.name}")
 
         self.validate_file()
@@ -36,5 +46,6 @@ class BaseLoader(ABC) :
 
         return text, metadata
 
+    @abstractmethod
     def extract_text(self) :
         pass
