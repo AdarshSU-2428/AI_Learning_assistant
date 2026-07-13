@@ -2,10 +2,11 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 
 from utils.logger import get_logger
+from config.settings import CHUNK_SIZE, CHUNK_OVERLAP
 
 
 class Chunker:
-    def __init__(self, chunk_size=1000, chunk_overlap=200):
+    def __init__(self, chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP):
         self.logger = get_logger(__name__)
 
         self.chunk_size = chunk_size

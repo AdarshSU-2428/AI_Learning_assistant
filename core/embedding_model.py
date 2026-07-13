@@ -2,9 +2,11 @@ from sentence_transformers import SentenceTransformer
 from langchain_core.documents import Document
 
 from utils.logger import get_logger
+from config.settings import EMBEDDING_MODEL
+
 
 class EmbeddingModel :
-    def __init__(self, model_name="BAAI/bge-base-en-v1.5") :
+    def __init__(self, model_name=EMBEDDING_MODEL) :
         self.logger = get_logger(__name__)
         self.model_name = model_name
 

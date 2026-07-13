@@ -2,12 +2,14 @@ import uuid
 import chromadb
 
 from utils.logger import get_logger
+from config.settings import (VECTOR_DB_PATH, COLLECTION_NAME)
+
 
 class VectorStore:
     def __init__(
         self, 
-        persist_directory="data/vector_store", 
-        collection_name="learning_assistant"
+        persist_directory=VECTOR_DB_PATH,
+        collection_name=COLLECTION_NAME
     ):
         self.logger = get_logger(__name__)
 
