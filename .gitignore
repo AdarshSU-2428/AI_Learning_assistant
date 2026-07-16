@@ -1,20 +1,15 @@
-# Byte-compiled / optimized / DLL files
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 
-# Virtual environments
 .venv/
 venv/
 ENV/
 
-# Environment variables (credentials/secrets)
 .env
 
-# Application logs
 logs/
 *.log
 
-# Personal/Project notes
 notes/
