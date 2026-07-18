@@ -63,29 +63,3 @@ class EmbeddingModel :
             raise
 
 
-if __name__ == "__main__":
-
-    from langchain_core.documents import Document
-
-    documents = [
-        Document(
-            page_content="Machine Learning is a subset of Artificial Intelligence.",
-            metadata={"source": "sample.pdf", "page": 1}
-        ),
-        Document(
-            page_content="Deep Learning uses neural networks.",
-            metadata={"source": "sample.pdf", "page": 2}
-        ),
-        Document(
-            page_content="Retrieval-Augmented Generation improves factual accuracy.",
-            metadata={"source": "sample.pdf", "page": 3}
-        )
-    ]
-
-    embedding_model = EmbeddingModel()
-
-    embeddings, valid_documents = embedding_model.generate_embeddings(documents)
-
-    print("\nEmbedding Shape:", embeddings.shape)
-    print("\nFirst Embedding (first 10 values):")
-    print(embeddings[0][:10])
