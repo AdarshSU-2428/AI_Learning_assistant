@@ -77,5 +77,35 @@ class TestEmbeddingModel(unittest.TestCase):
         with self.assertRaises(TypeError):
             self.embedding_model.generate_embeddings(["not a document"])
 
+    def test_generate_query_embedding_success(self):
+        mock_embedding = [0.1, 0.2, 0.3]
+        self.mock_model_instance.encode.return_value = mock_embedding
+
+        result = self.embedding_model.generate_query_embedding("test query")
+
+        self.assertEqual(result, mock_embedding)
+        self.mock_model_instance.encode.assert_called_once_with(
+            "test query",
+            convert_to_numpy=True,
+            normalize_embeddings=True
+        )
+
+    def test_generate_query_embedding_invalid_type_raises(self):
+        with self.assertRaises(TypeError):
+            self.embedding_model.generate_query_embedding(123)
+        with self.assertRaises(TypeError):
+            self.embedding_model.generate_query_embedding(None)
+
+    def test_generate_query_embedding_empty_query_raises(self):
+        with self.assertRaises(ValueError):
+            self.embedding_model.generate_query_embedding("")
+        with self.assertRaises(ValueError):
+            self.embedding_model.generate_query_embedding("   ")
+
+    def test_generate_query_embedding_failure_propagates(self):
+        self.mock_model_instance.encode.side_effect = RuntimeError("Encoding failed")
+        with self.assertRaises(RuntimeError):
+            self.embedding_model.generate_query_embedding("test query")
+
 if __name__ == "__main__":
     unittest.main()

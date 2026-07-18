@@ -66,31 +66,29 @@ class IndexingService:
             total_chunks = 0
             failed_files = []
 
-            for filename in os.listdir(folder_path):
-                file_path = os.path.join(folder_path, filename)
+            for root, _, files in os.walk(folder_path):
+                for filename in files:
+                    file_path = os.path.join(root, filename)
 
-                if not os.path.isfile(file_path):
-                    continue
+                    extension = os.path.splitext(filename)[1].lower()
 
-                extension = os.path.splitext(filename)[1].lower()
+                    if extension not in self.loaders:
+                        self.logger.warning(f"Skipping unsupported file: {file_path}")
+                        continue
 
-                if extension not in self.loaders:
-                    self.logger.warning(f"Skipping unsupported file: {filename}")
-                    continue
+                    try:
+                        stored = self._index_document(file_path)
 
-                try:
-                    stored = self._index_document(file_path)
+                        total_files += 1
+                        total_chunks += stored
 
-                    total_files += 1
-                    total_chunks += stored
+                    except Exception as e:
+                        self.logger.error(f"Skipping '{filename}' due to indexing error: {e}")
 
-                except Exception as e:
-                    self.logger.error(f"Skipping '{filename}' due to indexing error: {e}")
-
-                    failed_files.append({
-                        "file": filename,
-                        "error": str(e)
-                    })
+                        failed_files.append({
+                            "file": filename,
+                            "error": str(e)
+                        })
 
             self.logger.info(f"Directory indexing completed successfully.")
 

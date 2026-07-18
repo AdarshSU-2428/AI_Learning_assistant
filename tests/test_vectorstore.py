@@ -51,5 +51,49 @@ class TestVectorStore(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.vector_store.store(documents, embeddings)
 
+    def test_similarity_search_success(self):
+        import numpy as np
+        query_embedding = np.array([0.1, 0.2])
+        
+        # Mock the results returned by chromadb query
+        self.mock_collection.query.return_value = {
+            "documents": [["Retrieved text 1", "Retrieved text 2"]],
+            "metadatas": [[{"source": "doc1"}, {"source": "doc2"}]]
+        }
+
+        results = self.vector_store.similarity_search(query_embedding, top_k=2)
+
+        self.mock_collection.query.assert_called_once_with(
+            query_embeddings=[[0.1, 0.2]],
+            n_results=2
+        )
+
+        self.assertEqual(len(results), 2)
+        self.assertEqual(results[0].page_content, "Retrieved text 1")
+        self.assertEqual(results[0].metadata, {"source": "doc1"})
+        self.assertEqual(results[1].page_content, "Retrieved text 2")
+        self.assertEqual(results[1].metadata, {"source": "doc2"})
+
+    def test_similarity_search_invalid_top_k_raises(self):
+        import numpy as np
+        query_embedding = np.array([0.1, 0.2])
+        
+        with self.assertRaises(ValueError):
+            self.vector_store.similarity_search(query_embedding, top_k=0)
+        with self.assertRaises(ValueError):
+            self.vector_store.similarity_search(query_embedding, top_k=-5)
+
+    def test_similarity_search_none_query_embedding_raises(self):
+        with self.assertRaises(ValueError):
+            self.vector_store.similarity_search(None, top_k=2)
+
+    def test_similarity_search_failure_propagates(self):
+        import numpy as np
+        query_embedding = np.array([0.1, 0.2])
+        self.mock_collection.query.side_effect = RuntimeError("Query failed")
+
+        with self.assertRaises(RuntimeError):
+            self.vector_store.similarity_search(query_embedding, top_k=2)
+
 if __name__ == "__main__":
     unittest.main()

@@ -74,12 +74,10 @@ class TestIndexingService(unittest.TestCase):
         self.mock_vs_inst.store.assert_called_once_with(mock_docs, mock_embeddings)
 
     @patch("services.indexing_service.os.path.isdir")
-    @patch("services.indexing_service.os.listdir")
-    @patch("services.indexing_service.os.path.isfile")
-    def test_index_directory_success(self, mock_isfile, mock_listdir, mock_isdir):
+    @patch("services.indexing_service.os.walk")
+    def test_index_directory_success(self, mock_walk, mock_isdir):
         mock_isdir.return_value = True
-        mock_listdir.return_value = ["file1.pdf", "file2.docx", "unsupported.txt"]
-        mock_isfile.side_effect = lambda path: not path.endswith("unsupported.txt") or True # treat all as files for this test
+        mock_walk.return_value = [("dummy_folder", [], ["file1.pdf", "file2.docx", "unsupported.txt"])]
 
         # Mock _index_document method on the service
         self.service._index_document = MagicMock(side_effect=[10, 5])
@@ -95,12 +93,10 @@ class TestIndexingService(unittest.TestCase):
         self.assertEqual(self.service._index_document.call_count, 2)
 
     @patch("services.indexing_service.os.path.isdir")
-    @patch("services.indexing_service.os.listdir")
-    @patch("services.indexing_service.os.path.isfile")
-    def test_index_directory_with_failures(self, mock_isfile, mock_listdir, mock_isdir):
+    @patch("services.indexing_service.os.walk")
+    def test_index_directory_with_failures(self, mock_walk, mock_isdir):
         mock_isdir.return_value = True
-        mock_listdir.return_value = ["file1.pdf", "file2.docx"]
-        mock_isfile.return_value = True
+        mock_walk.return_value = [("dummy_folder", [], ["file1.pdf", "file2.docx"])]
 
         # Mock _index_document: first succeeds, second fails
         self.service._index_document = MagicMock(side_effect=[10, Exception("Failed to load PDF")])
