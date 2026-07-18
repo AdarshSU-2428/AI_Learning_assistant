@@ -40,6 +40,11 @@ class BaseLoader(ABC) :
 
         text = self.extract_text()
 
+        if not text.strip():
+            self.logger.warning(
+                "No text could be extracted."
+            )
+
         metadata = self.create_metadata()
 
         self.logger.info(f"{self.file_path.name} loaded successfully.")

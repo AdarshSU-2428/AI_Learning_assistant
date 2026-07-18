@@ -31,7 +31,14 @@ class EmbeddingModel :
                     raise TypeError(f"Item at index {index} is not a LangChain Document.")
 
                 if not document.page_content or not document.page_content.strip():
-                    source = document.metadata.get("source", "Unknown")
+                    metadata = document.metadata or {}
+                    
+                    source = (
+                        metadata.get("file_name") or
+                        (metadata.get("file_path") or metadata.get("source") or "").replace("\\", "/").split("/")[-1] or
+                        (str(metadata.get("id")) if "id" in metadata else None) or
+                        "Unknown"
+                    )
 
                     self.logger.warning(
                         f"Skipped empty document at index {index} "
@@ -63,3 +70,26 @@ class EmbeddingModel :
             raise
 
 
+    def generate_query_embedding(self, query):
+        self.logger.info("Generating query embedding...")
+
+        try:
+            if not isinstance(query, str):
+                raise TypeError("Query must be a string.")
+
+            if not query.strip():
+                raise ValueError("Query cannot be empty.")
+
+            embedding = self.model.encode(
+                query,
+                convert_to_numpy=True,
+                normalize_embeddings=True
+            )
+
+            self.logger.info("Query embedding generated successfully.")
+
+            return embedding
+
+        except Exception as e:
+            self.logger.error(f"Query embedding generation failed: {e}")
+            raise

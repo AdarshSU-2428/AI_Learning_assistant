@@ -13,7 +13,7 @@ class PPTLoader(BaseLoader):
 
             for slide in presentation.slides:
                 for shape in slide.shapes:
-                    if hasattr(shape, "text"):
+                    if hasattr(shape, "text") and shape.text.strip():
                         text += shape.text + "\n"
 
             self.logger.info( f"Successfully extracted text from {len(presentation.slides)} slides.")

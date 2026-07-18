@@ -1,5 +1,6 @@
 import uuid
 import chromadb
+from langchain_core.documents import Document
 
 from utils.logger import get_logger
 from config.settings import (VECTOR_DB_PATH, COLLECTION_NAME)
@@ -61,4 +62,41 @@ class VectorStore:
             self.logger.error(f"Vector storage failed: {e}")
             raise
 
+    def similarity_search(self, query_embedding, top_k):
+        self.logger.info(f"Searching top {top_k} similar documents...")
 
+        try:
+            if top_k <= 0:
+                raise ValueError("top_k must be greater than 0.")
+
+            if query_embedding is None:
+                raise ValueError("Query embedding cannot be None.")
+
+            results = self.collection.query(
+                query_embeddings=[query_embedding.tolist()],
+                n_results=top_k
+            )
+
+            retrieved_documents = []
+
+            for text, metadata in zip(
+                results["documents"][0],
+                results["metadatas"][0]
+            ):
+                retrieved_documents.append(
+                    Document(
+                        page_content=text,
+                        metadata=metadata
+                    )
+                )
+
+            if not retrieved_documents:
+                self.logger.warning("No similar documents found.")
+            else:
+                self.logger.info(f"Retrieved {len(retrieved_documents)} similar documents.")
+
+            return retrieved_documents
+
+        except Exception as e:
+            self.logger.error(f"Similarity search failed: {e}")
+            raise
