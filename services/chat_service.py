@@ -15,7 +15,7 @@ class ChatService:
         self.prompt_builder = PromptBuilder()
         self.llm = LLMClient()
 
-    def ask(self, question):
+    def chat(self, question):
         if not question or not question.strip():
             raise ValueError("Question cannot be empty.")
 
@@ -50,14 +50,10 @@ class ChatService:
             return {
                 "query": question,
                 "answer": answer,
-                "documents": reranked_docs
+                "sources": reranked_docs
             }
 
 
         except Exception as e:
             self.logger.exception(f"Error while processing query: {e}")
-            return {
-                "query": question,
-                "answer": "An unexpected error occurred while processing your request. Please try again.",
-                "documents": []
-            }
+            raise

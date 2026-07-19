@@ -27,6 +27,8 @@ RERANKER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
+DOCUMENTS_PATH = PROJECT_ROOT / "data" / "raw"
+
 VECTOR_DB_PATH = PROJECT_ROOT / "data" / "vector_store"
 COLLECTION_NAME = "learning_assistant"
 

@@ -115,6 +115,6 @@ class IndexingService:
             }
 
         except Exception as e:
-            self.logger.error(f"Directory indexing failed: {e}")
+            self.logger.exception(f"Directory indexing failed: {e}")
             raise
 

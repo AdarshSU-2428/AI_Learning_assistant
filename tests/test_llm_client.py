@@ -52,17 +52,16 @@ class TestLLMClient(unittest.TestCase):
             self.llm_client.generate_response("   ")
         self.mock_groq_instance.chat.completions.create.assert_not_called()
 
-    def test_generate_response_exception_returns_none(self):
+    def test_generate_response_exception_propagates(self):
         prompt = "Will fail"
         self.mock_groq_instance.chat.completions.create.side_effect = Exception("API error")
         
         # Directly mock the logger on the instance
         self.llm_client.logger = MagicMock()
         
-        response = self.llm_client.generate_response(prompt)
+        with self.assertRaises(Exception):
+            self.llm_client.generate_response(prompt)
 
-        # In current design, error is caught, exception logged, and None returned
-        self.assertIsNone(response)
         self.llm_client.logger.exception.assert_called_once_with("Failed to generate response from LLM.")
 
 if __name__ == "__main__":

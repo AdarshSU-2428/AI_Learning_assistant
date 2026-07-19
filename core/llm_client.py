@@ -54,11 +54,7 @@ class LLMClient:
 
             return answer
 
-        except Exception:
-
-            self.logger.exception(
-                "Failed to generate response from LLM."
-            )
- 
-
+        except Exception as e:
+            self.logger.exception("Failed to generate response from LLM.")
+            raise
     

@@ -22,16 +22,16 @@ class TestChatService(unittest.TestCase):
 
         self.chat_service = ChatService()
 
-    def test_ask_empty_question_raises(self):
+    def test_chat_empty_question_raises(self):
         with self.assertRaises(ValueError):
-            self.chat_service.ask("")
+            self.chat_service.chat("")
         with self.assertRaises(ValueError):
-            self.chat_service.ask("   ")
+            self.chat_service.chat("   ")
 
-    def test_ask_no_documents_retrieved(self):
+    def test_chat_no_documents_retrieved(self):
         self.mock_retriever.retrieve.return_value = []
         
-        result = self.chat_service.ask("Test question")
+        result = self.chat_service.chat("Test question")
         
         self.assertEqual(result["query"], "Test question")
         self.assertEqual(result["answer"], "I couldn't find any relevant information in the indexed documents.")
@@ -42,7 +42,7 @@ class TestChatService(unittest.TestCase):
         self.mock_pb.build_prompt.assert_not_called()
         self.mock_llm.generate_response.assert_not_called()
 
-    def test_ask_success(self):
+    def test_chat_success(self):
         question = "What is machine learning?"
         mock_docs = [Document(page_content="ML is...")]
         mock_reranked = [Document(page_content="ML is...")]
@@ -54,18 +54,18 @@ class TestChatService(unittest.TestCase):
         self.mock_pb.build_prompt.return_value = mock_prompt
         self.mock_llm.generate_response.return_value = mock_answer
 
-        result = self.chat_service.ask(question)
+        result = self.chat_service.chat(question)
 
         self.assertEqual(result["query"], question)
         self.assertEqual(result["answer"], mock_answer)
-        self.assertEqual(result["documents"], mock_reranked)
+        self.assertEqual(result["sources"], mock_reranked)
 
         self.mock_retriever.retrieve.assert_called_once_with(question)
         self.mock_reranker.rerank.assert_called_once_with(question, mock_docs)
         self.mock_pb.build_prompt.assert_called_once_with(SYSTEM_PROMPT, question, mock_reranked)
         self.mock_llm.generate_response.assert_called_once_with(mock_prompt)
 
-    def test_ask_llm_failure_returns_unexpected_error(self):
+    def test_chat_llm_failure_raises(self):
         question = "Test"
         mock_docs = [Document(page_content="doc")]
         mock_reranked = [Document(page_content="doc")]
@@ -76,31 +76,22 @@ class TestChatService(unittest.TestCase):
         self.mock_pb.build_prompt.return_value = mock_prompt
         self.mock_llm.generate_response.return_value = None  # Simulates API error returning None
 
-        result = self.chat_service.ask(question)
+        with self.assertRaises(RuntimeError):
+            self.chat_service.chat(question)
 
-        self.assertEqual(result["query"], question)
-        self.assertIn("An unexpected error occurred", result["answer"])
-        self.assertEqual(result["documents"], [])
-
-    def test_ask_retriever_failure_returns_unexpected_error(self):
+    def test_chat_retriever_failure_raises(self):
         question = "Test"
         self.mock_retriever.retrieve.side_effect = RuntimeError("DB down")
 
-        result = self.chat_service.ask(question)
+        with self.assertRaises(RuntimeError):
+            self.chat_service.chat(question)
 
-        self.assertEqual(result["query"], question)
-        self.assertIn("An unexpected error occurred", result["answer"])
-        self.assertEqual(result["documents"], [])
-
-    def test_ask_value_error_caught_and_returned(self):
+    def test_chat_value_error_propagates(self):
         question = "Test"
-        self.mock_retriever.retrieve.side_effect = ValueError("Some validation error message")
+        self.mock_retriever.retrieve.side_effect = ValueError("Some validation error")
 
-        result = self.chat_service.ask(question)
-
-        self.assertEqual(result["query"], question)
-        self.assertEqual(result["answer"], "An unexpected error occurred while processing your request. Please try again.")
-        self.assertEqual(result["documents"], [])
+        with self.assertRaises(ValueError):
+            self.chat_service.chat(question)
 
 if __name__ == "__main__":
     unittest.main()
