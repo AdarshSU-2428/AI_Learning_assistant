@@ -12,7 +12,7 @@ class ChatService:
         self.prompt_builder = PromptBuilder()
         self.llm = LLMClient()
 
-    def ask(self, question: str) -> dict:
+    def ask(self, question) :
         if not question or not question.strip():
             raise ValueError("Question cannot be empty.")
 
@@ -39,7 +39,7 @@ class ChatService:
             self.logger.info("Prompt built successfully.")
 
             answer = self.llm.generate_response(prompt)
-            if answer is None:
+            if not answer:
                 raise RuntimeError("LLM failed to generate a response.")
 
             self.logger.info("Successfully generated LLM response.")
@@ -50,13 +50,6 @@ class ChatService:
                 "documents": reranked_docs
             }
 
-        except ValueError as e:
-            self.logger.warning(f"Validation error: {e}")
-            return {
-                "query": question,
-                "answer": str(e),
-                "documents": []
-            }
 
         except Exception as e:
             self.logger.exception(f"Error while processing query: {e}")
