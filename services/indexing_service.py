@@ -1,4 +1,5 @@
 import os
+import uuid
 
 from utils.logger import get_logger
 
@@ -9,7 +10,8 @@ from core.loaders.ppt_loader import PPTLoader
 from core.preprocesser import Preprocessor
 from core.chunker import Chunker
 from core.embedding_model import EmbeddingModel
-from core.vector_store import VectorStore 
+from core.vector_store import VectorStore
+from core.index_manager import IndexManager 
 
 class IndexingService: 
     def __init__(self):
@@ -25,6 +27,7 @@ class IndexingService:
         self.chunker = Chunker()
         self.embedding_model = EmbeddingModel()
         self.vector_store = VectorStore()
+        self.index_manager = IndexManager()
 
     def _index_document(self, file_path):
         self.logger.info(f"Indexing file: {file_path}")
@@ -39,6 +42,8 @@ class IndexingService:
 
             text, metadata = loader.load(file_path)
 
+            document_id = str(uuid.uuid4())
+
             text, metadata = self.preprocesser.preprocess(text, metadata)
 
             documents = self.chunker.chunk_text(text, metadata)
@@ -46,6 +51,12 @@ class IndexingService:
             embeddings, valid_docs = self.embedding_model.generate_embeddings(documents)
 
             stored_count = self.vector_store.store(valid_docs, embeddings)
+
+            self.index_manager.register_document(
+                file_path=file_path,
+                document_id=document_id,
+                chunks=stored_count
+            )
 
             self.logger.info(f"Successfully indexed {file_path}")
 
@@ -74,6 +85,10 @@ class IndexingService:
 
                     if extension not in self.loaders:
                         self.logger.warning(f"Skipping unsupported file: {file_path}")
+                        continue
+
+                    if self.index_manager.is_document_indexed(file_path):
+                        self.logger.info(f"Skipping already indexed file: {file_path}")
                         continue
 
                     try:

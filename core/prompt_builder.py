@@ -1,25 +1,26 @@
 from utils.logger import get_logger
-from config.prompts import SYSTEM_PROMPT
 from langchain_core.documents import Document
 
 
 class PromptBuilder:
-
     def __init__(self):
         self.logger = get_logger(__name__)
 
-    def build_prompt(self, query, documents):
+    def build_prompt(self, prompt_template, user_input, documents):
         self.logger.info("Building prompt...")
 
         try:
             if not isinstance(documents, list):
                 raise TypeError("Documents must be a list.")
 
+            if not isinstance(prompt_template, str):
+                raise TypeError("Prompt template must be a string.")
+
             context = self._build_context(documents)
 
-            prompt = SYSTEM_PROMPT.format(
+            prompt = prompt_template.format(
                 context=context,
-                question=query
+                question=user_input
             )
 
             self.logger.info("Prompt built successfully.")

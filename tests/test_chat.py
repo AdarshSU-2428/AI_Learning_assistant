@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 from langchain_core.documents import Document
 from services.chat_service import ChatService
+from config.prompts import SYSTEM_PROMPT
 
 class TestChatService(unittest.TestCase):
     @patch("services.chat_service.Retriever")
@@ -61,7 +62,7 @@ class TestChatService(unittest.TestCase):
 
         self.mock_retriever.retrieve.assert_called_once_with(question)
         self.mock_reranker.rerank.assert_called_once_with(question, mock_docs)
-        self.mock_pb.build_prompt.assert_called_once_with(question, mock_reranked)
+        self.mock_pb.build_prompt.assert_called_once_with(SYSTEM_PROMPT, question, mock_reranked)
         self.mock_llm.generate_response.assert_called_once_with(mock_prompt)
 
     def test_ask_llm_failure_returns_unexpected_error(self):
@@ -98,7 +99,7 @@ class TestChatService(unittest.TestCase):
         result = self.chat_service.ask(question)
 
         self.assertEqual(result["query"], question)
-        self.assertEqual(result["answer"], "Some validation error message")
+        self.assertEqual(result["answer"], "An unexpected error occurred while processing your request. Please try again.")
         self.assertEqual(result["documents"], [])
 
 if __name__ == "__main__":

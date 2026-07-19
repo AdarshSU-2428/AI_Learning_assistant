@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from dotenv import load_dotenv
 import os
 
@@ -23,6 +25,11 @@ RERANK_TOP_K = 5
 EMBEDDING_MODEL = "BAAI/bge-base-en-v1.5"
 RERANKER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
-VECTOR_DB_PATH = "data/vector_store"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+VECTOR_DB_PATH = PROJECT_ROOT / "data" / "vector_store"
 COLLECTION_NAME = "learning_assistant"
+
+KNOWLEDGE_BASE_PATH = PROJECT_ROOT / "knowledge_base"
+
 

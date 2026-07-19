@@ -2,7 +2,10 @@ from core.retriever import Retriever
 from core.reranker import Reranker
 from core.prompt_builder import PromptBuilder
 from core.llm_client import LLMClient
+
 from utils.logger import get_logger
+
+from config.prompts import SYSTEM_PROMPT
 
 class ChatService:
     def __init__(self):
@@ -12,7 +15,7 @@ class ChatService:
         self.prompt_builder = PromptBuilder()
         self.llm = LLMClient()
 
-    def ask(self, question) :
+    def ask(self, question):
         if not question or not question.strip():
             raise ValueError("Question cannot be empty.")
 
@@ -35,7 +38,7 @@ class ChatService:
             reranked_docs = self.reranker.rerank(question, retrieved_docs)
             self.logger.info(f"Reranked to {len(reranked_docs)} documents.")
 
-            prompt = self.prompt_builder.build_prompt(question, reranked_docs)
+            prompt = self.prompt_builder.build_prompt(SYSTEM_PROMPT, question, reranked_docs)
             self.logger.info("Prompt built successfully.")
 
             answer = self.llm.generate_response(prompt)

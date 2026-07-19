@@ -20,7 +20,7 @@ class TestPromptBuilder(unittest.TestCase):
             Document(page_content="Content of doc4", metadata={}),
         ]
 
-        prompt = self.builder.build_prompt(query, docs)
+        prompt = self.builder.build_prompt(SYSTEM_PROMPT, query, docs)
 
         # Verify format of SYSTEM_PROMPT matches
         # Verify document metadata mapping
@@ -42,7 +42,7 @@ class TestPromptBuilder(unittest.TestCase):
 
     def test_build_prompt_empty_documents(self):
         query = "How to define an array?"
-        prompt = self.builder.build_prompt(query, [])
+        prompt = self.builder.build_prompt(SYSTEM_PROMPT, query, [])
 
         # Check format is filled with empty context
         expected_prompt = SYSTEM_PROMPT.format(context="", question=query)
@@ -54,33 +54,39 @@ class TestPromptBuilder(unittest.TestCase):
         mock_doc.page_content = None
         mock_doc.metadata = {"file_name": "empty.pdf"}
 
-        prompt = self.builder.build_prompt(query, [mock_doc])
+        prompt = self.builder.build_prompt(SYSTEM_PROMPT, query, [mock_doc])
 
         self.assertIn("Document 1\nSource : empty.pdf", prompt)
         self.assertIn("Content :", prompt)
         # Verify it doesn't crash and replaces None with empty string
         self.assertIn("Content :\n\n------------------------------------------------------------", prompt)
 
+    def test_build_prompt_invalid_template_type_raises(self):
+        with self.assertRaises(TypeError):
+            self.builder.build_prompt(123, "query", [])
+        with self.assertRaises(TypeError):
+            self.builder.build_prompt(None, "query", [])
+
     def test_build_prompt_invalid_documents_type_raises(self):
         with self.assertRaises(TypeError):
-            self.builder.build_prompt("query", "not a list")
+            self.builder.build_prompt(SYSTEM_PROMPT, "query", "not a list")
         with self.assertRaises(TypeError):
-            self.builder.build_prompt("query", None)
+            self.builder.build_prompt(SYSTEM_PROMPT, "query", None)
 
     def test_build_prompt_non_document_in_list_raises(self):
         docs = [Document(page_content="test"), "not a Document object"]
         with self.assertRaises(TypeError) as context:
-            self.builder.build_prompt("query", docs)
+            self.builder.build_prompt(SYSTEM_PROMPT, "query", docs)
         self.assertIn("is not a LangChain Document", str(context.exception))
 
-    @patch("core.prompt_builder.SYSTEM_PROMPT")
-    def test_build_prompt_formatting_exception_propagates(self, mock_system_prompt):
-        # Trigger formatting exception, e.g., KeyError or ValueError
-        mock_system_prompt.format.side_effect = ValueError("Formatting failed")
+    def test_build_prompt_formatting_exception_propagates(self):
+        # Trigger formatting exception, e.g., KeyError or ValueError by passing a mock template
+        mock_template = MagicMock(spec=str)
+        mock_template.format.side_effect = ValueError("Formatting failed")
         
         docs = [Document(page_content="test")]
         with self.assertRaises(ValueError):
-            self.builder.build_prompt("query", docs)
+            self.builder.build_prompt(mock_template, "query", docs)
 
 if __name__ == "__main__":
     unittest.main()

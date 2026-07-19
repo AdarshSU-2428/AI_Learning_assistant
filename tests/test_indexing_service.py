@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, ANY
 import os
 from langchain_core.documents import Document
 from services.indexing_service import IndexingService
@@ -12,8 +12,10 @@ class TestIndexingService(unittest.TestCase):
     @patch("services.indexing_service.Chunker")
     @patch("services.indexing_service.EmbeddingModel")
     @patch("services.indexing_service.VectorStore")
+    @patch("services.indexing_service.IndexManager")
     def setUp(
         self,
+        mock_im,
         mock_vs,
         mock_em,
         mock_chunker,
@@ -23,6 +25,10 @@ class TestIndexingService(unittest.TestCase):
         mock_pdf
     ):
         # Mock instance setups
+        self.mock_im_inst = MagicMock()
+        self.mock_im_inst.is_document_indexed.return_value = False
+        mock_im.return_value = self.mock_im_inst
+
         self.mock_preprocessor_inst = MagicMock()
         mock_preprocessor.return_value = self.mock_preprocessor_inst
 
@@ -72,6 +78,11 @@ class TestIndexingService(unittest.TestCase):
         self.mock_chunker_inst.chunk_text.assert_called_once_with("Preprocessed Text", {"source": "dummy_file.pdf"})
         self.mock_em_inst.generate_embeddings.assert_called_once_with(mock_docs)
         self.mock_vs_inst.store.assert_called_once_with(mock_docs, mock_embeddings)
+        self.mock_im_inst.register_document.assert_called_once_with(
+            file_path="dummy_file.pdf",
+            document_id=ANY,
+            chunks=1
+        )
 
     @patch("services.indexing_service.os.path.isdir")
     @patch("services.indexing_service.os.walk")
@@ -91,6 +102,25 @@ class TestIndexingService(unittest.TestCase):
 
         # Confirm _index_document was called for the two supported files
         self.assertEqual(self.service._index_document.call_count, 2)
+
+    @patch("services.indexing_service.os.path.isdir")
+    @patch("services.indexing_service.os.walk")
+    def test_index_directory_skips_already_indexed(self, mock_walk, mock_isdir):
+        mock_isdir.return_value = True
+        mock_walk.return_value = [("dummy_folder", [], ["file1.pdf"])]
+        
+        # Mock index_manager to say it is already indexed
+        self.mock_im_inst.is_document_indexed.return_value = True
+
+        # Mock _index_document method on the service
+        self.service._index_document = MagicMock()
+
+        result = self.service.index_directory("dummy_folder")
+
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["indexed_files"], 0)
+        self.assertEqual(result["chunks_stored"], 0)
+        self.service._index_document.assert_not_called()
 
     @patch("services.indexing_service.os.path.isdir")
     @patch("services.indexing_service.os.walk")
