@@ -10,4 +10,4 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     query: str
     answer: str
-    sources: list[Any]
+    sources: list[Any] = []

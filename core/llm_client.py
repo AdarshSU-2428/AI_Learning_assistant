@@ -21,29 +21,46 @@ class LLMClient:
             f"(Model: {self.model})"
         )
 
-    def _validate_prompt(self, prompt):
-        if not isinstance(prompt, str):
-            raise TypeError("Prompt must be a string.")
+    def _validate_messages(self, messages):
+        if not isinstance(messages, list):
+            raise TypeError("Messages must be a list.")
 
-        if not prompt.strip():
-            raise ValueError("Prompt cannot be empty.")
+        valid_roles = {"system", "user", "assistant"}
 
-    def generate_response(self, prompt):
-        self._validate_prompt(prompt)
+        for index, msg in enumerate(messages, start=1):
+            if not isinstance(msg, dict):
+                raise TypeError(f"Message at index {index} is not a dictionary.")
+
+            if "role" not in msg or "content" not in msg:
+                raise ValueError(
+                    f"Message at index {index} must contain both 'role' and 'content' keys."
+                )
+
+            if not isinstance(msg["role"], str) or not isinstance(msg["content"], str):
+                raise TypeError(
+                    f"Message at index {index} values for 'role' and 'content' must be strings."
+                )
+
+            if msg["role"] not in valid_roles:
+                raise ValueError(
+                    f"Message at index {index} role '{msg['role']}' is invalid. "
+                    f"Allowed roles: {valid_roles}"
+                )
+
+            if not msg["role"].strip() or not msg["content"].strip():
+                raise ValueError(
+                    f"Message at index {index} values for 'role' and 'content' cannot be empty or blank."
+                )
+
+    def generate_response(self, messages):
+        self._validate_messages(messages)
 
         self.logger.info("Generating LLM response...")
 
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
-
-                messages=[
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-
+                messages=messages,
                 temperature=LLM_TEMPERATURE,
                 max_completion_tokens=LLM_MAX_TOKENS,
             )

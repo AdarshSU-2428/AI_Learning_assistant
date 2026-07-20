@@ -1,7 +1,7 @@
 from sentence_transformers import CrossEncoder
 from utils.logger import get_logger
 
-from config.settings import (RERANK_TOP_K, RERANKER_MODEL)
+from config.settings import (RERANK_TOP_K, RERANKER_MODEL, RERANK_SCORE_THRESHOLD)
 
 
 class Reranker:
@@ -50,7 +50,17 @@ class Reranker:
 
                 self.logger.info(f"[Reranker] {source} | Score: {score:.4f}")
 
-            reranked_documents = [document for document, _ in scored_documents[:top_k]]
+            reranked_documents = [
+                document
+                for document, score in scored_documents
+                if score >= RERANK_SCORE_THRESHOLD
+            ][:top_k]
+
+            if not reranked_documents:
+                self.logger.info(
+                    "No documents passed the reranker confidence threshold."
+                )
+                return []
 
             self.logger.info(f"Successfully reranked {len(reranked_documents)} documents.")
 

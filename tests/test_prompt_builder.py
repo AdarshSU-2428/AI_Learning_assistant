@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 from langchain_core.documents import Document
 from core.prompt_builder import PromptBuilder
-from config.prompts import SYSTEM_PROMPT
+from config.prompts import SYSTEM_PROMPT, USER_PROMPT
 
 class TestPromptBuilder(unittest.TestCase):
     def setUp(self):
@@ -11,7 +11,7 @@ class TestPromptBuilder(unittest.TestCase):
     def test_init_success(self):
         self.assertIsNotNone(self.builder.logger)
 
-    def test_build_prompt_success_all_metadata_types(self):
+    def test_build_messages_success_all_metadata_types(self):
         query = "What are neural networks?"
         docs = [
             Document(page_content="Content of doc1", metadata={"file_name": "network.pdf", "page": 1}),
@@ -20,73 +20,85 @@ class TestPromptBuilder(unittest.TestCase):
             Document(page_content="Content of doc4", metadata={}),
         ]
 
-        prompt = self.builder.build_prompt(SYSTEM_PROMPT, query, docs)
+        messages = self.builder.build_messages(SYSTEM_PROMPT, USER_PROMPT, query, docs)
 
-        # Verify format of SYSTEM_PROMPT matches
+        self.assertEqual(len(messages), 2)
+        self.assertEqual(messages[0]["role"], "system")
+        self.assertEqual(messages[0]["content"], SYSTEM_PROMPT)
+
+        self.assertEqual(messages[1]["role"], "user")
+        user_content = messages[1]["content"]
+
         # Verify document metadata mapping
-        self.assertIn("Document 1\nSource : network.pdf\nPage   : 1", prompt)
-        self.assertIn("Content of doc1", prompt)
+        self.assertIn("Document 1\nSource : network.pdf\nPage   : 1", user_content)
+        self.assertIn("Content of doc1", user_content)
 
-        self.assertIn("Document 2\nSource : neurons.pptx", prompt)
-        self.assertNotIn("Document 2\nSource : neurons.pptx\nPage", prompt)
-        self.assertIn("Content of doc2", prompt)
+        self.assertIn("Document 2\nSource : neurons.pptx", user_content)
+        self.assertNotIn("Document 2\nSource : neurons.pptx\nPage", user_content)
+        self.assertIn("Content of doc2", user_content)
 
-        self.assertIn("Document 3\nSource : synapses.docx\nPage   : 10", prompt)
-        self.assertIn("Content of doc3", prompt)
+        self.assertIn("Document 3\nSource : synapses.docx\nPage   : 10", user_content)
+        self.assertIn("Content of doc3", user_content)
 
-        self.assertIn("Document 4\nSource : Unknown", prompt)
-        self.assertIn("Content of doc4", prompt)
+        self.assertIn("Document 4\nSource : Unknown", user_content)
+        self.assertIn("Content of doc4", user_content)
         
         # Verify query and context placeholders replaced correctly
-        self.assertIn(query, prompt)
+        self.assertIn(query, user_content)
 
-    def test_build_prompt_empty_documents(self):
+    def test_build_messages_empty_documents(self):
         query = "How to define an array?"
-        prompt = self.builder.build_prompt(SYSTEM_PROMPT, query, [])
+        messages = self.builder.build_messages(SYSTEM_PROMPT, USER_PROMPT, query, [])
 
-        # Check format is filled with empty context
-        expected_prompt = SYSTEM_PROMPT.format(context="", question=query)
-        self.assertEqual(prompt, expected_prompt)
+        self.assertEqual(len(messages), 2)
+        self.assertEqual(messages[0]["role"], "system")
+        self.assertEqual(messages[0]["content"], SYSTEM_PROMPT)
 
-    def test_build_prompt_none_page_content(self):
+        self.assertEqual(messages[1]["role"], "user")
+        expected_user_content = USER_PROMPT.format(context="", question=query)
+        self.assertEqual(messages[1]["content"], expected_user_content)
+
+    def test_build_messages_none_page_content(self):
         query = "None page content check"
         mock_doc = MagicMock(spec=Document)
         mock_doc.page_content = None
         mock_doc.metadata = {"file_name": "empty.pdf"}
 
-        prompt = self.builder.build_prompt(SYSTEM_PROMPT, query, [mock_doc])
+        messages = self.builder.build_messages(SYSTEM_PROMPT, USER_PROMPT, query, [mock_doc])
+        user_content = messages[1]["content"]
 
-        self.assertIn("Document 1\nSource : empty.pdf", prompt)
-        self.assertIn("Content :", prompt)
+        self.assertIn("Document 1\nSource : empty.pdf", user_content)
+        self.assertIn("Content :", user_content)
         # Verify it doesn't crash and replaces None with empty string
-        self.assertIn("Content :\n\n------------------------------------------------------------", prompt)
+        self.assertIn("Content :\n\n------------------------------------------------------------", user_content)
 
-    def test_build_prompt_invalid_template_type_raises(self):
+    def test_build_messages_invalid_template_type_raises(self):
         with self.assertRaises(TypeError):
-            self.builder.build_prompt(123, "query", [])
+            self.builder.build_messages(123, USER_PROMPT, "query", [])
         with self.assertRaises(TypeError):
-            self.builder.build_prompt(None, "query", [])
+            self.builder.build_messages(SYSTEM_PROMPT, 123, "query", [])
+        with self.assertRaises(TypeError):
+            self.builder.build_messages(None, USER_PROMPT, "query", [])
 
-    def test_build_prompt_invalid_documents_type_raises(self):
+    def test_build_messages_invalid_documents_type_raises(self):
         with self.assertRaises(TypeError):
-            self.builder.build_prompt(SYSTEM_PROMPT, "query", "not a list")
+            self.builder.build_messages(SYSTEM_PROMPT, USER_PROMPT, "query", "not a list")
         with self.assertRaises(TypeError):
-            self.builder.build_prompt(SYSTEM_PROMPT, "query", None)
+            self.builder.build_messages(SYSTEM_PROMPT, USER_PROMPT, "query", None)
 
-    def test_build_prompt_non_document_in_list_raises(self):
+    def test_build_messages_non_document_in_list_raises(self):
         docs = [Document(page_content="test"), "not a Document object"]
         with self.assertRaises(TypeError) as context:
-            self.builder.build_prompt(SYSTEM_PROMPT, "query", docs)
+            self.builder.build_messages(SYSTEM_PROMPT, USER_PROMPT, "query", docs)
         self.assertIn("is not a LangChain Document", str(context.exception))
 
-    def test_build_prompt_formatting_exception_propagates(self):
-        # Trigger formatting exception, e.g., KeyError or ValueError by passing a mock template
+    def test_build_messages_formatting_exception_propagates(self):
         mock_template = MagicMock(spec=str)
         mock_template.format.side_effect = ValueError("Formatting failed")
         
         docs = [Document(page_content="test")]
         with self.assertRaises(ValueError):
-            self.builder.build_prompt(mock_template, "query", docs)
+            self.builder.build_messages(SYSTEM_PROMPT, mock_template, "query", docs)
 
 if __name__ == "__main__":
     unittest.main()

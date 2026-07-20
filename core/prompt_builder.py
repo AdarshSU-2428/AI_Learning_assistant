@@ -6,29 +6,43 @@ class PromptBuilder:
     def __init__(self):
         self.logger = get_logger(__name__)
 
-    def build_prompt(self, prompt_template, user_input, documents):
-        self.logger.info("Building prompt...")
+    def build_messages(self, system_prompt, user_prompt, user_input, documents):
+        self.logger.info("Building messages...")
 
         try:
             if not isinstance(documents, list):
                 raise TypeError("Documents must be a list.")
 
-            if not isinstance(prompt_template, str):
-                raise TypeError("Prompt template must be a string.")
+            if not isinstance(system_prompt, str):
+                raise TypeError("System prompt must be a string.")
+
+            if not isinstance(user_prompt, str):
+                raise TypeError("User prompt must be a string.")
 
             context = self._build_context(documents)
 
-            prompt = prompt_template.format(
+            user_content = user_prompt.format(
                 context=context,
                 question=user_input
             )
 
-            self.logger.info("Prompt built successfully.")
+            messages = [
+                {
+                    "role": "system",
+                    "content": system_prompt
+                },
+                {
+                    "role": "user",
+                    "content": user_content
+                }
+            ]
 
-            return prompt
+            self.logger.info("Messages built successfully.")
+
+            return messages
 
         except Exception as e:
-            self.logger.error(f"Failed to build prompt: {e}")
+            self.logger.error(f"Failed to build messages: {e}")
             raise
 
     def _build_context(self, documents):

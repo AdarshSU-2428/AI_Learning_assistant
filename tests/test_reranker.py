@@ -62,6 +62,24 @@ class TestReranker(unittest.TestCase):
         ]
         self.mock_model_instance.predict.assert_called_once_with(expected_pairs)
 
+    def test_rerank_score_threshold_filtering(self):
+        docs = [
+            Document(page_content="good doc", metadata={"source": "good.pdf"}),
+            Document(page_content="borderline doc", metadata={"source": "borderline.pdf"}),
+            Document(page_content="bad doc", metadata={"source": "bad.pdf"}),
+        ]
+        # With threshold = 0.35:
+        # good doc: 0.8 (should keep)
+        # borderline doc: 0.35 (should keep)
+        # bad doc: 0.34 (should filter out)
+        mock_scores = [0.8, 0.35, 0.34]
+        self.mock_model_instance.predict.return_value = mock_scores
+
+        result = self.reranker.rerank("query", docs, top_k=3)
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0].page_content, "good doc")
+        self.assertEqual(result[1].page_content, "borderline doc")
+
     def test_rerank_failure_propagates(self):
         docs = [Document(page_content="doc1 content")]
         self.mock_model_instance.predict.side_effect = RuntimeError("Prediction error")
