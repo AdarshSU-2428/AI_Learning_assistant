@@ -8,7 +8,6 @@
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.28%2B-FF4B4B.svg?logo=streamlit)](https://streamlit.io/)
 [![ChromaDB](https://img.shields.io/badge/VectorDB-ChromaDB-purple.svg)](https://www.trychroma.com/)
 [![Groq Llama 3.3](https://img.shields.io/badge/LLM-Groq_Llama--3.3--70B-orange.svg)](https://groq.com/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 ---
 
