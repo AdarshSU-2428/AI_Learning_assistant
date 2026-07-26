@@ -2,11 +2,12 @@ import unittest
 from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock
 
-# Import the FastAPI app instance from backend.app
-from backend.app import app
+# Import the FastAPI app instance from backend.backend_app
+from backend.backend_app import app
+
 
 class TestBackendAPI(unittest.TestCase):
-    @patch("backend.app.app_service")
+    @patch("backend.backend_app.app_service")
     def setUp(self, mock_app_service):
         self.mock_app_service = mock_app_service
         self.client = TestClient(app)
@@ -17,7 +18,7 @@ class TestBackendAPI(unittest.TestCase):
         mock_response = {
             "query": "What is Transformer?",
             "answer": "A Transformer is a deep learning model.",
-            "sources": []
+            "sources": [],
         }
         mock_route_service.chat.return_value = mock_response
 
@@ -41,6 +42,7 @@ class TestBackendAPI(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["detail"], "Question cannot be empty.")
         mock_route_service.chat.assert_called_once_with("")
+
 
 if __name__ == "__main__":
     unittest.main()
