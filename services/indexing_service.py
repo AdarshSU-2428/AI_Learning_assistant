@@ -11,16 +11,17 @@ from core.preprocesser import Preprocessor
 from core.chunker import Chunker
 from core.embedding_model import EmbeddingModel
 from core.vector_store import VectorStore
-from core.index_manager import IndexManager 
+from core.index_manager import IndexManager
 
-class IndexingService: 
+
+class IndexingService:
     def __init__(self):
         self.logger = get_logger(__name__)
 
         self.loaders = {
-            '.pdf': PDFLoader(),
-            '.docx': DOCXLoader(),
-            '.pptx': PPTLoader()
+            ".pdf": PDFLoader(),
+            ".docx": DOCXLoader(),
+            ".pptx": PPTLoader(),
         }
 
         self.preprocesser = Preprocessor()
@@ -34,27 +35,48 @@ class IndexingService:
 
         try:
             extension = os.path.splitext(file_path)[1].lower()
-        
+
             loader = self.loaders.get(extension)
 
             if loader is None:
                 raise ValueError(f"Unsupported file type: {extension}")
 
-            text, metadata = loader.load(file_path)
+            units = loader.load(file_path)
 
             document_id = str(uuid.uuid4())
 
-            text, metadata = self.preprocesser.preprocess(text, metadata)
+            documents = []
+            next_chunk_id = 0
 
-            documents = self.chunker.chunk_text(text, metadata)
+            for unit in units:
+                text = unit["text"]
+                metadata = unit["metadata"]
 
-            embeddings, valid_docs = self.embedding_model.generate_embeddings(documents)
+                preprocessed_text, preprocessed_metadata = (
+                    self.preprocesser.preprocess(text, metadata)
+                )
+
+                if not preprocessed_text or not preprocessed_text.strip():
+                    continue
+
+                chunks = self.chunker.chunk_text(
+                    preprocessed_text,
+                    preprocessed_metadata,
+                    start_chunk_id=next_chunk_id,
+                )
+
+                documents.extend(chunks)
+                next_chunk_id += len(chunks)
+
+            embeddings, valid_docs = self.embedding_model.generate_embeddings(
+                documents
+            )
 
             stored_count = self.vector_store.store(valid_docs, embeddings)
 
             self.index_manager.register_document(
-                file_path=file_path,
-                document_id=document_id,
+                file_path=file_path, 
+                document_id=document_id, 
                 chunks=stored_count
             )
 
@@ -64,11 +86,11 @@ class IndexingService:
 
         except Exception as e:
             self.logger.error(f"Failed to index '{file_path}': {e}")
-            raise  
-            
+            raise
+
     def index_directory(self, folder_path):
         self.logger.info(f"Starting indexing for the directory: {folder_path}")
-        
+
         try:
             if not os.path.isdir(folder_path):
                 raise ValueError(f"Directory not found: {folder_path}")
@@ -100,10 +122,12 @@ class IndexingService:
                     except Exception as e:
                         self.logger.error(f"Skipping '{filename}' due to indexing error: {e}")
 
-                        failed_files.append({
-                            "file": filename,
-                            "error": str(e)
-                        })
+                        failed_files.append(
+                            {
+                                "file": filename, 
+                                "error": str(e)
+                            }
+                        )
 
             self.logger.info(f"Directory indexing completed successfully.")
 
@@ -111,10 +135,9 @@ class IndexingService:
                 "status": "success",
                 "indexed_files": total_files,
                 "failed_files": failed_files,
-                "chunks_stored": total_chunks
+                "chunks_stored": total_chunks,
             }
 
         except Exception as e:
             self.logger.exception(f"Directory indexing failed: {e}")
             raise
-
