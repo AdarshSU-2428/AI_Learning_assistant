@@ -9,28 +9,6 @@
 [![ChromaDB](https://img.shields.io/badge/VectorDB-ChromaDB-purple.svg)](https://www.trychroma.com/)
 [![Groq Llama 3.3](https://img.shields.io/badge/LLM-Groq_Llama--3.3--70B-orange.svg)](https://groq.com/)
 
----
-
-## 📖 Table of Contents
-- [Overview](#-overview)
-- [🎯 Assistant Modes & Future Roadmap](#-assistant-modes--future-roadmap)
-- [✨ Key Features](#-key-features)
-- [🏗️ System Architecture](#️-system-architecture)
-- [🛠️ Tech Stack](#️-tech-stack)
-- [📂 Directory Structure](#-directory-structure)
-- [🚀 Getting Started](#-getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Installation](#installation)
-  - [Environment Variables](#environment-variables)
-- [💡 Usage](#-usage)
-  - [Starting Backend API](#1-start-the-fastapi-backend)
-  - [Starting Frontend UI](#2-start-the-streamlit-frontend)
-- [🔌 API Endpoints](#-api-endpoints)
-- [🧪 Running Tests](#-running-tests)
-- [🛡️ Security & Anti-Hallucination Safeguards](#️-security--anti-hallucination-safeguards)
-
----
-
 ## 📘 Overview
 
 The **AI Learning Assistant (v1.0)** is an end-to-end Retrieval-Augmented Generation (RAG) platform designed to act as an interactive study companion for students. By indexing course materials—including lecture slides, textbooks, and notes—the system delivers accurate, pedagogical explanations tailored to student queries.
