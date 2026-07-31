@@ -68,17 +68,28 @@ class TestReranker(unittest.TestCase):
             Document(page_content="borderline doc", metadata={"source": "borderline.pdf"}),
             Document(page_content="bad doc", metadata={"source": "bad.pdf"}),
         ]
-        # With threshold = 0.35:
         # good doc: 0.8 (should keep)
         # borderline doc: 0.35 (should keep)
-        # bad doc: 0.34 (should filter out)
-        mock_scores = [0.8, 0.35, 0.34]
+        # bad doc: 0.15 (should filter out under effective threshold 0.20)
+        mock_scores = [0.8, 0.35, 0.15]
         self.mock_model_instance.predict.return_value = mock_scores
 
         result = self.reranker.rerank("query", docs, top_k=3)
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0].page_content, "good doc")
         self.assertEqual(result[1].page_content, "borderline doc")
+
+    def test_rerank_outside_kb_rejection(self):
+        docs = [
+            Document(page_content="outside doc 1", metadata={"source": "outside1.pdf"}),
+            Document(page_content="outside doc 2", metadata={"source": "outside2.pdf"}),
+        ]
+        # Outside-KB query scores are heavily negative (< 0.20)
+        mock_scores = [-7.8, -11.2]
+        self.mock_model_instance.predict.return_value = mock_scores
+
+        result = self.reranker.rerank("outside query", docs, top_k=3)
+        self.assertEqual(result, [])
 
     def test_rerank_failure_propagates(self):
         docs = [Document(page_content="doc1 content")]

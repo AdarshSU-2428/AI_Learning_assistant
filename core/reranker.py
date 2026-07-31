@@ -50,10 +50,16 @@ class Reranker:
 
                 self.logger.info(f"[Reranker] {source} | Score: {score:.4f}")
 
+            top_score = scored_documents[0][1] if scored_documents else -999.0
+
+            effective_threshold = (
+                0.20 if top_score >= 0.20 else RERANK_SCORE_THRESHOLD
+            )
+
             reranked_documents = [
                 document
                 for document, score in scored_documents
-                if score >= RERANK_SCORE_THRESHOLD
+                if score >= effective_threshold
             ][:top_k]
 
             if not reranked_documents:
