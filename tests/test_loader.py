@@ -52,30 +52,53 @@ class TestBaseLoader(unittest.TestCase):
 
 class TestPDFLoader(unittest.TestCase):
     @patch("core.loaders.pdf_loader.PdfReader")
-    def test_pdf_extraction_success(self, mock_pdf_reader):
+    def test_pdf_extraction_slide_window_success(self, mock_pdf_reader):
         mock_page_1 = MagicMock()
-        mock_page_1.extract_text.return_value = "Page 1 Text"
+        mock_page_1.extract_text.return_value = "Short Slide 1 Text"
         mock_page_2 = MagicMock()
-        mock_page_2.extract_text.return_value = "Page 2 Text"
+        mock_page_2.extract_text.return_value = "Short Slide 2 Text"
 
         mock_reader_instance = mock_pdf_reader.return_value
         mock_reader_instance.pages = [mock_page_1, mock_page_2]
 
-        loader = PDFLoader("dummy.pdf")
+        loader = PDFLoader("dummy_slides.pdf")
 
         with patch.object(loader, "validate_file") as mock_validate:
             units = loader.load()
 
             self.assertEqual(len(units), 2)
-            self.assertEqual(units[0]["text"], "Page 1 Text")
-            self.assertEqual(units[0]["metadata"]["page"], 1)
-            self.assertEqual(units[0]["metadata"]["file_name"], "dummy.pdf")
+            self.assertIn("[Slide 1]:\nShort Slide 1 Text", units[0]["text"])
+            self.assertIn("[Slide 2]:\nShort Slide 2 Text", units[0]["text"])
+            self.assertEqual(units[0]["metadata"]["page"], "1-2")
+            self.assertEqual(units[0]["metadata"]["file_name"], "dummy_slides.pdf")
             self.assertEqual(units[0]["metadata"]["file_type"], ".pdf")
 
-            self.assertEqual(units[1]["text"], "Page 2 Text")
-            self.assertEqual(units[1]["metadata"]["page"], 2)
-
             mock_validate.assert_called_once()
+
+    @patch("core.loaders.pdf_loader.PdfReader")
+    def test_pdf_extraction_long_textbook_success(self, mock_pdf_reader):
+        # Create dense textbook text (> 150 words per page)
+        dense_text_1 = ("Word " * 200).strip()
+        dense_text_2 = ("Textbook " * 200).strip()
+
+        mock_page_1 = MagicMock()
+        mock_page_1.extract_text.return_value = dense_text_1
+        mock_page_2 = MagicMock()
+        mock_page_2.extract_text.return_value = dense_text_2
+
+        mock_reader_instance = mock_pdf_reader.return_value
+        mock_reader_instance.pages = [mock_page_1, mock_page_2]
+
+        loader = PDFLoader("dummy_textbook.pdf")
+
+        with patch.object(loader, "validate_file"):
+            units = loader.load()
+
+            self.assertEqual(len(units), 2)
+            self.assertEqual(units[0]["text"], dense_text_1)
+            self.assertEqual(units[0]["metadata"]["page"], 1)
+            self.assertEqual(units[1]["text"], dense_text_2)
+            self.assertEqual(units[1]["metadata"]["page"], 2)
 
     @patch("core.loaders.pdf_loader.PdfReader")
     def test_pdf_extraction_failure(self, mock_pdf_reader):
@@ -114,13 +137,11 @@ class TestPPTLoader(unittest.TestCase):
             units = loader.load()
 
             self.assertEqual(len(units), 2)
-            self.assertEqual(units[0]["text"], "Slide 1 Content\n")
-            self.assertEqual(units[0]["metadata"]["slide"], 1)
+            self.assertIn("[Slide 1]:\nSlide 1 Content", units[0]["text"])
+            self.assertIn("[Slide 2]:\nSlide 2 Content", units[0]["text"])
+            self.assertEqual(units[0]["metadata"]["slide"], "1-2")
             self.assertEqual(units[0]["metadata"]["file_name"], "dummy.pptx")
             self.assertEqual(units[0]["metadata"]["file_type"], ".pptx")
-
-            self.assertEqual(units[1]["text"], "Slide 2 Content\n")
-            self.assertEqual(units[1]["metadata"]["slide"], 2)
 
             mock_validate.assert_called_once()
 
