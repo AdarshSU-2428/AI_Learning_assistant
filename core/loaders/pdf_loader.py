@@ -1,6 +1,7 @@
 from pypdf import PdfReader
 
 from core.loaders.loader import BaseLoader
+from core.metadata import create_document_metadata
 from config.settings import PDF_SLIDE_WINDOW_SIZE
 
 
@@ -15,6 +16,8 @@ class PDFLoader(BaseLoader):
         try:
             reader = PdfReader(self.file_path)
             raw_pages = []
+
+            subject, content_type, source_type = self.infer_metadata_attributes()
 
             for page_num, page in enumerate(reader.pages, start=1):
                 page_text = page.extract_text()
@@ -40,24 +43,41 @@ class PDFLoader(BaseLoader):
                         start_p if start_p == end_p else f"{start_p}-{end_p}"
                     )
 
+                    meta = create_document_metadata(
+                        file_name=self.file_path.name,
+                        file_path=str(self.file_path),
+                        page=page_meta,
+                        slide=page_meta,
+                        subject=subject,
+                        content_type=content_type,
+                        source_type=source_type
+                    )
+
                     units.append(
                         {
                             "text": combined_text,
-                            "metadata": {"page": page_meta},
+                            "metadata": meta,
                         }
                     )
             else:
                 for page_num, page_text in raw_pages:
+                    meta = create_document_metadata(
+                        file_name=self.file_path.name,
+                        file_path=str(self.file_path),
+                        page=page_num,
+                        subject=subject,
+                        content_type=content_type,
+                        source_type=source_type
+                    )
+
                     units.append(
                         {
                             "text": page_text,
-                            "metadata": {"page": page_num},
+                            "metadata": meta,
                         }
                     )
 
-            self.logger.info(
-                f"Successfully extracted {len(units)} units from {len(reader.pages)} pages (avg words/page: {avg_words:.1f})."
-            )
+            self.logger.info(f"Successfully extracted {len(units)} units from {len(reader.pages)} pages (subject: {subject}, content_type: {content_type}, source_type: {source_type}, avg words/page: {avg_words:.1f}).")
 
             return units
 

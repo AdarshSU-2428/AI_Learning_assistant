@@ -62,7 +62,7 @@ class VectorStore:
             self.logger.error(f"Vector storage failed: {e}")
             raise
 
-    def similarity_search(self, query_embedding, top_k):
+    def similarity_search(self, query_embedding, top_k, where=None):
         self.logger.info(f"Searching top {top_k} similar documents...")
 
         try:
@@ -72,10 +72,15 @@ class VectorStore:
             if query_embedding is None:
                 raise ValueError("Query embedding cannot be None.")
 
-            results = self.collection.query(
-                query_embeddings=[query_embedding.tolist()],
-                n_results=top_k
-            )
+            query_kwargs = {
+                "query_embeddings": [query_embedding.tolist()],
+                "n_results": top_k
+            }
+            
+            if where:
+                query_kwargs["where"] = where
+
+            results = self.collection.query(**query_kwargs)
 
             retrieved_documents = []
 
