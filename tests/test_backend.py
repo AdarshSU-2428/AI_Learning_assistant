@@ -28,7 +28,7 @@ class TestBackendAPI(unittest.TestCase):
         # Assertions
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), mock_response)
-        mock_route_service.chat.assert_called_once_with("What is Transformer?")
+        mock_route_service.chat.assert_called_once_with("What is Transformer?", subject=None)
 
     @patch("backend.routes.app_service")
     def test_chat_validation_error_propagates(self, mock_route_service):
@@ -41,7 +41,7 @@ class TestBackendAPI(unittest.TestCase):
         # Assertions
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["detail"], "Question cannot be empty.")
-        mock_route_service.chat.assert_called_once_with("")
+        mock_route_service.chat.assert_called_once_with("", subject=None)
 
 
 if __name__ == "__main__":

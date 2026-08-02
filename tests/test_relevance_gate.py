@@ -1,0 +1,48 @@
+import unittest
+from langchain_core.documents import Document
+from core.relevance_gate import RelevanceGate
+
+
+class TestRelevanceGate(unittest.TestCase):
+    def setUp(self):
+        self.gate = RelevanceGate(score_threshold=0.35)
+
+    def test_evaluate_relevance_empty_documents(self):
+        docs, is_relevant = self.gate.evaluate_relevance([])
+        self.assertEqual(docs, [])
+        self.assertFalse(is_relevant)
+
+    def test_evaluate_relevance_high_score_accepted(self):
+        doc1 = Document(page_content="good doc", metadata={"file_name": "good.pdf"})
+        doc2 = Document(page_content="borderline doc", metadata={"file_name": "borderline.pdf"})
+        doc3 = Document(page_content="bad doc", metadata={"file_name": "bad.pdf"})
+
+        scored_docs = [(doc1, 0.85), (doc2, 0.30), (doc3, 0.15)]
+        docs, is_relevant = self.gate.evaluate_relevance(scored_docs)
+
+        self.assertTrue(is_relevant)
+        self.assertEqual(len(docs), 2)
+        self.assertEqual(docs[0].page_content, "good doc")
+        self.assertEqual(docs[1].page_content, "borderline doc")
+
+    def test_evaluate_relevance_out_of_syllabus_refusal(self):
+        doc1 = Document(page_content="irrelevant doc 1")
+        doc2 = Document(page_content="irrelevant doc 2")
+
+        scored_docs = [(doc1, -5.2), (doc2, -10.1)]
+        docs, is_relevant = self.gate.evaluate_relevance(scored_docs)
+
+        self.assertFalse(is_relevant)
+        self.assertEqual(docs, [])
+
+    def test_evaluate_relevance_custom_threshold_override(self):
+        doc1 = Document(page_content="doc 1")
+        scored_docs = [(doc1, 0.10)]
+
+        docs, is_relevant = self.gate.evaluate_relevance(scored_docs, score_threshold=0.50)
+        self.assertFalse(is_relevant)
+        self.assertEqual(docs, [])
+
+
+if __name__ == "__main__":
+    unittest.main()

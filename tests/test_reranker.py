@@ -4,6 +4,7 @@ from langchain_core.documents import Document
 from core.reranker import Reranker
 from config.settings import RERANK_TOP_K
 
+
 class TestReranker(unittest.TestCase):
     @patch("core.reranker.CrossEncoder")
     def setUp(self, mock_cross_encoder):
@@ -15,19 +16,19 @@ class TestReranker(unittest.TestCase):
         self.assertEqual(self.reranker.model_name, "cross-encoder/ms-marco-MiniLM-L-6-v2")
         self.assertIsNotNone(self.reranker.model)
 
-    def test_rerank_empty_documents(self):
-        result = self.reranker.rerank("query", [])
+    def test_score_documents_empty_documents(self):
+        result = self.reranker.score_documents("query", [])
         self.assertEqual(result, [])
         self.mock_model_instance.predict.assert_not_called()
 
-    def test_rerank_invalid_top_k_raises(self):
+    def test_score_documents_invalid_top_k_raises(self):
         docs = [Document(page_content="doc1")]
         with self.assertRaises(ValueError):
-            self.reranker.rerank("query", docs, top_k=0)
+            self.reranker.score_documents("query", docs, top_k=0)
         with self.assertRaises(ValueError):
-            self.reranker.rerank("query", docs, top_k=-1)
+            self.reranker.score_documents("query", docs, top_k=-1)
 
-    def test_rerank_success(self):
+    def test_score_documents_success(self):
         docs = [
             Document(page_content="doc1 content", metadata={"file_name": "doc1.pdf"}),
             Document(page_content="doc2 content", metadata={"file_path": "path\\to\\doc2.docx"}),
@@ -40,56 +41,33 @@ class TestReranker(unittest.TestCase):
         mock_scores = [0.1, 0.9, 0.5, 0.7, 0.2]
         self.mock_model_instance.predict.return_value = mock_scores
 
-        # Rerank and return top 3 documents
-        result = self.reranker.rerank("test query", docs, top_k=3)
+        # Score documents and return top 3 scored pairs
+        results = self.reranker.score_documents("test query", docs, top_k=3)
 
         # Expected sorted order by score descending:
-        # doc2 (0.9), doc4 (0.7), doc3 (0.5), doc5 (0.2), doc1 (0.1)
-        # top 3 should be: doc2, doc4, doc3
-        self.assertEqual(len(result), 3)
-        self.assertEqual(result[0].page_content, "doc2 content")
-        self.assertEqual(result[0].metadata["file_path"], "path\\to\\doc2.docx")
-        self.assertEqual(result[1].page_content, "doc4 content")
-        self.assertEqual(result[2].page_content, "doc3 content")
+        # doc2 (0.9), doc4 (0.7), doc3 (0.5)
+        self.assertEqual(len(results), 3)
+        self.assertEqual(results[0][0].page_content, "doc2 content")
+        self.assertAlmostEqual(results[0][1], 0.9)
+        self.assertEqual(results[1][0].page_content, "doc4 content")
+        self.assertAlmostEqual(results[1][1], 0.7)
+        self.assertEqual(results[2][0].page_content, "doc3 content")
+        self.assertAlmostEqual(results[2][1], 0.5)
 
-        # Verify correct pairs passed to predict
-        expected_pairs = [
-            ["test query", "doc1 content"],
-            ["test query", "doc2 content"],
-            ["test query", "doc3 content"],
-            ["test query", "doc4 content"],
-            ["test query", "doc5 content"],
-        ]
-        self.mock_model_instance.predict.assert_called_once_with(expected_pairs)
-
-    def test_rerank_score_threshold_filtering(self):
+    def test_rerank_returns_ranked_documents(self):
         docs = [
             Document(page_content="good doc", metadata={"source": "good.pdf"}),
             Document(page_content="borderline doc", metadata={"source": "borderline.pdf"}),
             Document(page_content="bad doc", metadata={"source": "bad.pdf"}),
         ]
-        # good doc: 0.8 (should keep)
-        # borderline doc: 0.35 (should keep)
-        # bad doc: 0.15 (should filter out under effective threshold 0.20)
         mock_scores = [0.8, 0.35, 0.15]
         self.mock_model_instance.predict.return_value = mock_scores
 
         result = self.reranker.rerank("query", docs, top_k=3)
-        self.assertEqual(len(result), 2)
+        self.assertEqual(len(result), 3)
         self.assertEqual(result[0].page_content, "good doc")
         self.assertEqual(result[1].page_content, "borderline doc")
-
-    def test_rerank_outside_kb_rejection(self):
-        docs = [
-            Document(page_content="outside doc 1", metadata={"source": "outside1.pdf"}),
-            Document(page_content="outside doc 2", metadata={"source": "outside2.pdf"}),
-        ]
-        # Outside-KB query scores are heavily negative (< 0.20)
-        mock_scores = [-7.8, -11.2]
-        self.mock_model_instance.predict.return_value = mock_scores
-
-        result = self.reranker.rerank("outside query", docs, top_k=3)
-        self.assertEqual(result, [])
+        self.assertEqual(result[2].page_content, "bad doc")
 
     def test_rerank_failure_propagates(self):
         docs = [Document(page_content="doc1 content")]
@@ -97,6 +75,7 @@ class TestReranker(unittest.TestCase):
 
         with self.assertRaises(RuntimeError):
             self.reranker.rerank("query", docs)
+
 
 if __name__ == "__main__":
     unittest.main()
