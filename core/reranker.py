@@ -1,7 +1,7 @@
 from sentence_transformers import CrossEncoder
 from utils.logger import get_logger
 
-from config.settings import (RERANK_TOP_K, RERANKER_MODEL, RERANK_SCORE_THRESHOLD)
+from config.settings import (RERANK_TOP_K, RERANKER_MODEL)
 
 
 class Reranker:
@@ -19,12 +19,12 @@ class Reranker:
             self.logger.error(f"Failed to load reranker model: {e}")
             raise
 
-    def rerank(self, query, documents, top_k=RERANK_TOP_K):
-        self.logger.info("Starting reranking...")
+    def score_documents(self, query, documents, top_k=RERANK_TOP_K):
+        self.logger.info("Starting candidate document scoring...")
 
         try:
             if not documents:
-                self.logger.warning("No documents to rerank.")
+                self.logger.warning("No documents to score.")
                 return []
 
             if top_k <= 0:
@@ -34,7 +34,7 @@ class Reranker:
 
             scores = self.model.predict(pairs)
 
-            scored_documents = list(zip(documents, scores))
+            scored_documents = list(zip(documents, [float(s) for s in scores]))
 
             scored_documents.sort(key=lambda item: item[1], reverse=True)
 
@@ -50,28 +50,24 @@ class Reranker:
 
                 self.logger.info(f"[Reranker] {source} | Score: {score:.4f}")
 
-            top_score = scored_documents[0][1] if scored_documents else -999.0
+            return scored_documents[:top_k]
 
-            effective_threshold = (
-                0.20 if top_score >= 0.20 else RERANK_SCORE_THRESHOLD
-            )
+        except Exception as e:
+            self.logger.error(f"Document scoring failed: {e}")
+            raise
 
-            reranked_documents = [
-                document
-                for document, score in scored_documents
-                if score >= effective_threshold
-            ][:top_k]
+    def rerank(self, query, documents, top_k=RERANK_TOP_K):
+        self.logger.info("Starting reranking...")
 
-            if not reranked_documents:
-                self.logger.info(
-                    "No documents passed the reranker confidence threshold."
-                )
-                return []
+        try:
+            scored_documents = self.score_documents(query, documents, top_k=top_k)
+
+            reranked_documents = [doc for doc, score in scored_documents]
 
             self.logger.info(f"Successfully reranked {len(reranked_documents)} documents.")
 
             return reranked_documents
-
+            
         except Exception as e:
             self.logger.error(f"Reranking failed: {e}")
             raise
