@@ -2,7 +2,10 @@ import unittest
 from unittest.mock import patch, MagicMock
 from langchain_core.documents import Document
 from core.prompt_builder import PromptBuilder
-from config.prompts import SYSTEM_PROMPT, USER_PROMPT
+from config.prompts import (
+    LEARNING_SYSTEM_PROMPT as SYSTEM_PROMPT,
+    LEARNING_USER_PROMPT as USER_PROMPT,
+)
 
 class TestPromptBuilder(unittest.TestCase):
     def setUp(self):
