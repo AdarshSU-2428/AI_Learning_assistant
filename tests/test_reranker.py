@@ -46,13 +46,17 @@ class TestReranker(unittest.TestCase):
 
         # Expected sorted order by score descending:
         # doc2 (0.9), doc4 (0.7), doc3 (0.5)
+        import math
+        def _sigmoid(x):
+            return 1.0 / (1.0 + math.exp(-x))
+
         self.assertEqual(len(results), 3)
         self.assertEqual(results[0][0].page_content, "doc2 content")
-        self.assertAlmostEqual(results[0][1], 0.9)
+        self.assertAlmostEqual(results[0][1], _sigmoid(0.9))
         self.assertEqual(results[1][0].page_content, "doc4 content")
-        self.assertAlmostEqual(results[1][1], 0.7)
+        self.assertAlmostEqual(results[1][1], _sigmoid(0.7))
         self.assertEqual(results[2][0].page_content, "doc3 content")
-        self.assertAlmostEqual(results[2][1], 0.5)
+        self.assertAlmostEqual(results[2][1], _sigmoid(0.5))
 
     def test_rerank_returns_ranked_documents(self):
         docs = [

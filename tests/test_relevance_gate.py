@@ -17,7 +17,7 @@ class TestRelevanceGate(unittest.TestCase):
         doc2 = Document(page_content="borderline doc", metadata={"file_name": "borderline.pdf"})
         doc3 = Document(page_content="bad doc", metadata={"file_name": "bad.pdf"})
 
-        scored_docs = [(doc1, 0.85), (doc2, 0.30), (doc3, 0.15)]
+        scored_docs = [(doc1, 0.85), (doc2, 0.30), (doc3, 0.01)]
         docs, is_relevant = self.gate.evaluate_relevance(scored_docs)
 
         self.assertTrue(is_relevant)
@@ -29,7 +29,7 @@ class TestRelevanceGate(unittest.TestCase):
         doc1 = Document(page_content="irrelevant doc 1")
         doc2 = Document(page_content="irrelevant doc 2")
 
-        scored_docs = [(doc1, -5.2), (doc2, -10.1)]
+        scored_docs = [(doc1, 0.00001), (doc2, 0.000001)]
         docs, is_relevant = self.gate.evaluate_relevance(scored_docs)
 
         self.assertFalse(is_relevant)
@@ -37,7 +37,7 @@ class TestRelevanceGate(unittest.TestCase):
 
     def test_evaluate_relevance_custom_threshold_override(self):
         doc1 = Document(page_content="doc 1")
-        scored_docs = [(doc1, 0.10)]
+        scored_docs = [(doc1, 0.00001)]
 
         docs, is_relevant = self.gate.evaluate_relevance(scored_docs, score_threshold=0.50)
         self.assertFalse(is_relevant)
