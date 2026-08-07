@@ -6,6 +6,7 @@ from core.llm_client import LLMClient
 from core.safety_manager import SafetyManager
 from utils.logger import get_logger
 from config.prompts import LEARNING_SYSTEM_PROMPT, LEARNING_USER_PROMPT
+from config.settings import RETRIEVAL_TOP_K
 
 
 class LearningService:
@@ -32,7 +33,7 @@ class LearningService:
 
             self.logger.info(f"User Question: {question}")
 
-            config = RetrievalConfig(top_k=35, subject=subject, content_type="notes")
+            config = RetrievalConfig(top_k=RETRIEVAL_TOP_K, subject=subject, content_type="notes")
             retrieved_docs = self.retriever.retrieve(sanitized_question, config=config)
 
             if not retrieved_docs:
@@ -46,7 +47,7 @@ class LearningService:
 
             self.logger.info(f"Retrieved {len(retrieved_docs)} candidate documents.")
 
-            scored_docs = self.reranker.score_documents(sanitized_question, retrieved_docs)
+            scored_docs = self.reranker.score_documents(sanitized_question, retrieved_docs, top_k=20)
 
             accepted_docs, is_relevant = self.relevance_gate.evaluate_relevance(scored_docs)
 
