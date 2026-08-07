@@ -12,6 +12,30 @@ def render_sidebar():
 
         st.divider()
 
+        st.markdown("#### 📚 Course Subject Filter")
+        try:
+            from core.vector_store import VectorStore
+            db_subjects = VectorStore().get_all_subjects()
+        except Exception:
+            db_subjects = []
+
+        subjects = ["All Subjects"] + (db_subjects if db_subjects else [
+            "DBMS", "DAA", "AI", "Discrete Maths", "Optimization Techniques", "Operating system", "Python", "COA", "DEC", "Biology", "MEE"
+        ])
+
+        selected_subject = st.selectbox(
+            "Select Subject:",
+            options=subjects,
+            index=0,
+            help="Select a subject to search specific course notes, or 'All Subjects' for global search.",
+        )
+
+        st.session_state.selected_subject = (
+            None if selected_subject == "All Subjects" else selected_subject
+        )
+
+        st.divider()
+
         st.markdown("#### 📖 About")
         st.write(
             "The AI Learning Assistant is your dedicated study tool. "

@@ -51,7 +51,8 @@ def render_chat_interface(api_client: APIClient):
         # Call APIClient inside thinking state
         with st.spinner("Thinking..."):
             try:
-                response = api_client.send_message(cleaned_prompt)
+                selected_subject = st.session_state.get("selected_subject")
+                response = api_client.send_message(cleaned_prompt, subject=selected_subject)
                 answer = response.get("answer", "")
                 sources = response.get("sources", [])
 

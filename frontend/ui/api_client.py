@@ -36,11 +36,15 @@ class APIClient:
 
         self.timeout = timeout
 
-    def send_message(self, query):
+    def send_message(self, query, subject=None):
         try:
+            payload = {"query": query}
+            if subject:
+                payload["subject"] = subject
+
             response = requests.post(
                 f"{self.base_url}/chat",
-                json={"query": query},
+                json=payload,
                 timeout=self.timeout,
             )
 

@@ -104,12 +104,6 @@ def render_welcome_state():
         <div class="welcome-card">
             <h3>Welcome to your AI Learning Assistant! 👋</h3>
             <p>I'm here to help you understand your study materials, clarify concepts, and answer your questions accurately based on your course documents.</p>
-            <div class="suggestion-header">💡 Try asking questions like:</div>
-            <ul>
-                <li><em>"Summarize the main concepts in chapter 1"</em></li>
-                <li><em>"Explain the difference between supervised and unsupervised learning"</em></li>
-                <li><em>"What are the key takeaways from the lecture notes?"</em></li>
-            </ul>
         </div>
         """,
         unsafe_allow_html=True,
