@@ -12,7 +12,7 @@ if not GROQ_API_KEY:
         "GROQ_API_KEY environment variable is not set."
     )
 
-LLM_MODEL = "llama-3.3-70b-versatile"
+LLM_MODEL = "llama-3.1-8b-instant"
 LLM_TEMPERATURE = 0.2
 LLM_MAX_TOKENS = 1024
 
@@ -21,7 +21,7 @@ CHUNK_OVERLAP = 200
 
 PDF_SLIDE_WINDOW_SIZE = 3
 
-RETRIEVAL_TOP_K = 35
+RETRIEVAL_TOP_K = 60
 RERANK_TOP_K = 5
 RERANK_SCORE_THRESHOLD = 0.35
 
