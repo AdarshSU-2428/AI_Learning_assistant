@@ -34,7 +34,11 @@ class Reranker:
 
             scores = self.model.predict(pairs)
 
-            scored_documents = list(zip(documents, [float(s) for s in scores]))
+            import math
+            def _sigmoid(x):
+                return 1.0 / (1.0 + math.exp(-x))
+
+            scored_documents = list(zip(documents, [float(_sigmoid(s)) for s in scores]))
 
             scored_documents.sort(key=lambda item: item[1], reverse=True)
 

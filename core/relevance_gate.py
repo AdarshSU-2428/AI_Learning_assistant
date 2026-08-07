@@ -19,14 +19,34 @@ class RelevanceGate:
 
             top_score = float(scored_documents[0][1])
 
-            effective_threshold = 0.20 if top_score >= 0.20 else threshold
+            # Noise floor threshold (out-of-syllabus baking cake queries score < 0.00001)
+            if top_score < 0.00005:
+                self.logger.info(f"Top candidate score ({top_score:.6f}) below noise floor. Query rejected.")
+                return [], False
 
-            accepted_documents = [
-                doc for doc, score in scored_documents if score >= effective_threshold
-            ]
+            is_ocr_doc = any(
+                doc.metadata.get("source_type") == "handwritten_notes"
+                or "DMS_" in str(doc.metadata.get("file_name", "")).upper()
+                or "OT_" in str(doc.metadata.get("file_name", "")).upper()
+                for doc, _ in scored_documents[:5]
+            )
+
+            if is_ocr_doc and top_score < 0.20:
+                self.logger.info("Handwritten OCR resilience active: Accepting top candidate OCR documents.")
+                accepted_documents = [doc for doc, score in scored_documents[:12]]
+            elif top_score >= 0.20:
+                accepted_documents = [
+                    doc for doc, score in scored_documents[:12] if score >= 0.05
+                ]
+            elif top_score >= 0.001:
+                accepted_documents = [
+                    doc for doc, score in scored_documents[:12] if score >= 0.001
+                ]
+            else:
+                accepted_documents = []
 
             if not accepted_documents:
-                self.logger.info(f"No documents passed relevance gate (top score: {top_score:.4f}, threshold: {effective_threshold:.4f}).")
+                self.logger.info(f"No documents passed relevance gate (top score: {top_score:.4f}).")
                 return [], False
 
             self.logger.info(f"RelevanceGate accepted {len(accepted_documents)} / {len(scored_documents)} documents (top score: {top_score:.4f}).")

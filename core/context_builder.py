@@ -11,7 +11,7 @@ class ContextBuilder:
         try:
             if not documents:
                 self.logger.warning("No context documents received.")
-                return  ""
+                return ""
 
             if not isinstance(documents, list):
                 raise TypeError("Documents must be a list of LangChain Document objects.")
@@ -24,12 +24,6 @@ class ContextBuilder:
                     raise TypeError(f"Item at index {index} is not a LangChain Document.")
 
                 page_content = str(doc.page_content).strip() if doc.page_content is not None else ""
-
-                if page_content in seen_contents:
-                    continue
-
-                seen_contents.add(page_content)
-
                 metadata = doc.metadata or {}
 
                 source = (
@@ -42,6 +36,12 @@ class ContextBuilder:
 
                 page = metadata.get("page")
                 slide = metadata.get("slide")
+
+                doc_key = str(doc.page_content).strip() if doc.page_content is not None else ""
+                if doc_key in seen_contents:
+                    continue
+
+                seen_contents.add(doc_key)
 
                 document_context = [
                     f"Document {len(context_parts) + 1}",
@@ -64,8 +64,11 @@ class ContextBuilder:
                 context_parts.append("\n".join(document_context))
 
             self.logger.info(f"Built context successfully with {len(context_parts)} unique document chunks.")
-            return "\n\n".join(context_parts)
-            
+            final_context = "\n\n".join(context_parts)
+            if len(final_context) > 8000:
+                final_context = final_context[:8000] + "\n...[Context truncated to fit token limits]..."
+            return final_context
+
         except Exception as e:
             self.logger.error(f"Failed to build context: {e}")
             raise

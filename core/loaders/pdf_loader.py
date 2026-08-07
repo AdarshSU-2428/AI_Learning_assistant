@@ -1,7 +1,7 @@
 from pypdf import PdfReader
-
 from core.loaders.loader import BaseLoader
 from core.metadata import create_document_metadata
+from core.ocr_engine import OCREngine
 from config.settings import PDF_SLIDE_WINDOW_SIZE
 
 
@@ -9,6 +9,7 @@ class PDFLoader(BaseLoader):
     def __init__(self, file_path=None, window_size=PDF_SLIDE_WINDOW_SIZE):
         super().__init__(file_path)
         self.window_size = window_size
+        self.ocr_engine = OCREngine()
 
     def extract_text(self):
         self.logger.info(f"Extracting text from {self.file_path.name}")
@@ -19,13 +20,41 @@ class PDFLoader(BaseLoader):
 
             subject, content_type, source_type = self.infer_metadata_attributes()
 
+            # Pass 1: Extract standard digital text
+            digital_pages = []
             for page_num, page in enumerate(reader.pages, start=1):
-                page_text = page.extract_text()
-                if page_text and page_text.strip():
-                    raw_pages.append((page_num, page_text.strip()))
+                page_text = page.extract_text() or ""
+                clean_text = page_text.strip()
+                if clean_text.lower() == "scanned by camscanner":
+                    clean_text = ""
+                digital_pages.append((page_num, clean_text, page))
+
+            total_digital_words = sum(len(txt.split()) for _, txt, _ in digital_pages)
+            avg_digital_words = total_digital_words / len(digital_pages) if digital_pages else 0
+
+            # Pass 2: Trigger OCR ONLY if the document is genuinely a scanned PDF (avg words < 15)
+            is_scanned_pdf = avg_digital_words < 15
+            if is_scanned_pdf:
+                source_type = "handwritten_notes"
+
+            for page_num, clean_text, page in digital_pages:
+                if is_scanned_pdf and (not clean_text or len(clean_text) < 15):
+                    if hasattr(page, "images") and page.images:
+                        ocr_parts = []
+                        for img in page.images:
+                            ocr_txt = self.ocr_engine.extract_text_from_image(img.data)
+                            if ocr_txt:
+                                ocr_parts.append(ocr_txt)
+                        if ocr_parts:
+                            clean_text = "\n".join(ocr_parts).strip()
+                            self.logger.info(f"OCR extracted {len(clean_text.split())} words from page {page_num} of {self.file_path.name}")
+
+                if clean_text:
+                    raw_pages.append((page_num, clean_text))
 
             units = []
             if not raw_pages:
+                self.logger.warning(f"No readable text could be extracted from {self.file_path.name}")
                 return units
 
             total_words = sum(len(txt.split()) for _, txt in raw_pages)

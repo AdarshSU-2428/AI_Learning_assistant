@@ -105,3 +105,16 @@ class VectorStore:
         except Exception as e:
             self.logger.error(f"Similarity search failed: {e}")
             raise
+
+    def get_all_subjects(self):
+        try:
+            results = self.collection.get(include=["metadatas"])
+            metadatas = results.get("metadatas", [])
+            subjects = set()
+            for m in metadatas:
+                if isinstance(m, dict) and "subject" in m and m["subject"]:
+                    subjects.add(m["subject"])
+            return sorted(list(subjects))
+        except Exception as e:
+            self.logger.error(f"Failed to retrieve subjects from ChromaDB: {e}")
+            return []

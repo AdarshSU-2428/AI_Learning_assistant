@@ -20,11 +20,23 @@ class RetrievalConfig:
     def get_where_filter(self):
         filters = []
         if self.subject:
-            filters.append(
-                {
-                    "subject": self.subject
-                }
-            )
+            target = str(self.subject).strip().lower()
+            all_db_subjects = VectorStore().get_all_subjects()
+
+            matched = []
+            for s in all_db_subjects:
+                s_str = str(s).strip().lower()
+                initials = "".join(w[0] for w in s_str.split() if w.isalnum())
+                if target == s_str or target in s_str or s_str in target or target == initials:
+                    matched.append(s)
+
+            if matched:
+                if len(matched) == 1:
+                    filters.append({"subject": matched[0]})
+                else:
+                    filters.append({"subject": {"$in": matched}})
+            else:
+                filters.append({"subject": self.subject})
         if self.content_type:
             filters.append(
                 {
