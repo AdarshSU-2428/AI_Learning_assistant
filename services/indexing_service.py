@@ -14,6 +14,10 @@ from core.vector_store import VectorStore
 from core.index_manager import IndexManager
 
 
+import json
+
+from config.settings import (QUIZ_COLLECTION_NAME, QUIZ_DATA_PATH, COLLECTION_NAME)
+
 class IndexingService:
     def __init__(self):
         self.logger = get_logger(__name__)
@@ -27,7 +31,8 @@ class IndexingService:
         self.preprocesser = Preprocessor()
         self.chunker = Chunker()
         self.embedding_model = EmbeddingModel()
-        self.vector_store = VectorStore()
+        self.vector_store = VectorStore(collection_name=COLLECTION_NAME)
+        self.quiz_vector_store = VectorStore(collection_name=QUIZ_COLLECTION_NAME)
         self.index_manager = IndexManager()
 
     def _index_document(self, file_path):
@@ -141,3 +146,90 @@ class IndexingService:
         except Exception as e:
             self.logger.exception(f"Directory indexing failed: {e}")
             raise
+
+    def index_quiz_file(self, file_path, subject=None):
+        self.logger.info(f"Indexing quiz file: {file_path}")
+        try:
+            filename = os.path.basename(file_path)
+            inferred_subject = subject or os.path.splitext(filename)[0].replace("_", " ")
+
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            raw_questions = json.loads(content)
+            if isinstance(raw_questions, dict) and "questions" in raw_questions:
+                raw_questions = raw_questions["questions"]
+            elif not isinstance(raw_questions, list):
+                raw_questions = [raw_questions]
+
+            documents = []
+            for item in raw_questions:
+                if not isinstance(item, dict) or not item.get("question"):
+                    continue
+
+                q_text = item["question"]
+                options = item.get("options", [])
+                correct_ans = str(item.get("correct_answer", "")).strip().upper()
+                difficulty = item.get("difficulty", "Standard")
+                hint = item.get("hint", "")
+                explanation = item.get("explanation", "")
+
+                metadata = {
+                    "subject": inferred_subject,
+                    "difficulty": difficulty,
+                    "correct_answer": correct_ans,
+                    "options": json.dumps(options),
+                    "hint": hint,
+                    "explanation": explanation,
+                    "source_type": "quiz_bank",
+                    "file_name": filename
+                }
+
+                documents.append(
+                    Document(
+                        page_content=f"{inferred_subject} {difficulty} {q_text}",
+                        metadata=metadata
+                    )
+                )
+
+            if not documents:
+                return 0
+
+            embeddings, valid_docs = self.embedding_model.generate_embeddings(documents)
+            stored_count = self.quiz_vector_store.store(valid_docs, embeddings)
+            self.logger.info(f"Stored {stored_count} quiz questions for '{inferred_subject}' in quiz_bank collection.")
+            return stored_count
+
+        except Exception as e:
+            self.logger.error(f"Failed to index quiz file '{file_path}': {e}")
+            raise
+
+    def index_quiz_directory(self, folder_path=None):
+        target_dir = folder_path or QUIZ_DATA_PATH
+        self.logger.info(f"Indexing quiz directory: {target_dir}")
+
+        if not os.path.isdir(target_dir):
+            os.makedirs(target_dir, exist_ok=True)
+            return {"status": "success", "indexed_files": 0, "questions_stored": 0}
+
+        total_files = 0
+        total_questions = 0
+        failed = []
+
+        for root, _, files in os.walk(target_dir):
+            for file in files:
+                if file.endswith((".json", ".quiz.json")):
+                    file_path = os.path.join(root, file)
+                    try:
+                        stored = self.index_quiz_file(file_path)
+                        total_files += 1
+                        total_questions += stored
+                    except Exception as err:
+                        failed.append({"file": file, "error": str(err)})
+
+        return {
+            "status": "success",
+            "indexed_files": total_files,
+            "questions_stored": total_questions,
+            "failed_files": failed
+        }
