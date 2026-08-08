@@ -12,6 +12,8 @@ ENV/
 logs/
 *.log
 
+.vscode/
+
 notes/
 
 data/
