@@ -206,13 +206,13 @@ def render_sources(sources):
                 st.markdown(f"- 📄 **{filename}**{details}")
 
 
-def render_user_message(content: str):
+def render_user_message(content):
     """Renders a user chat message bubble."""
     with st.chat_message("user"):
         st.markdown(content)
 
 
-def render_assistant_message(content: str, sources: list = None):
+def render_assistant_message(content, sources):
     """Renders an assistant chat message bubble with optional sources."""
     with st.chat_message("assistant"):
         st.markdown(content)
@@ -220,7 +220,7 @@ def render_assistant_message(content: str, sources: list = None):
             render_sources(sources)
 
 
-def get_user_friendly_error_message(exc: Exception) -> str:
+def get_user_friendly_error_message(exc):
     """
     Translates technical exceptions into product-level user messages.
     Excludes technical jargon (backend, FastAPI, HTTP codes, tracebacks).
@@ -249,6 +249,6 @@ def get_user_friendly_error_message(exc: Exception) -> str:
     return "Something went wrong. Please try again."
 
 
-def render_error(message: str):
+def render_error(message):
     """Renders a user-friendly error message container."""
     st.error(message, icon="⚠️")

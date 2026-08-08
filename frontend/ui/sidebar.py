@@ -1,38 +1,48 @@
 import streamlit as st
 
+DEFAULT_SUBJECTS = [
+    "AI",
+    "Biology",
+    "COA",
+    "DAA",
+    "DBMS",
+    "DEC",
+    "Discrete Maths",
+    "MEE",
+    "OOP Java",
+    "Operating system",
+    "Optimization Techniques",
+    "Python",
+]
+
 
 def render_sidebar():
     """
-    Renders a polished, student-focused sidebar with application branding,
-    usage instructions, and session control actions.
+    Renders a dedicated Learning Mode sidebar with navigation back to the Hub,
+    course subject filters, tips, and session reset controls.
     """
     with st.sidebar:
-        st.markdown("### 🎓 AI Learning Assistant")
-        st.caption("Student Study Companion v1.0")
+        st.markdown("### 🎓 Learning Mode")
+        st.caption("Lecture Notes & Slide Q&A Companion")
+
+        # Back to Modes Hub Navigation Button
+        if st.button("🏠 Back to Modes Hub", use_container_width=True, type="primary"):
+            st.session_state.active_mode = "home"
+            st.rerun()
 
         st.divider()
 
         st.markdown("#### 📚 Course Subject Filter")
-        try:
-            from core.vector_store import VectorStore
-            db_subjects = VectorStore().get_all_subjects()
-        except Exception:
-            db_subjects = []
-
-        subjects = ["All Subjects"] + (db_subjects if db_subjects else [
-            "DBMS", "DAA", "AI", "Discrete Maths", "Optimization Techniques", "Operating system", "Python", "COA", "DEC", "Biology", "MEE"
-        ])
 
         selected_subject = st.selectbox(
             "Select Subject:",
-            options=subjects,
+            options=DEFAULT_SUBJECTS,
             index=0,
-            help="Select a subject to search specific course notes, or 'All Subjects' for global search.",
+            help="Select a subject to search specific course notes.",
+            key="learning_subject_select",
         )
 
-        st.session_state.selected_subject = (
-            None if selected_subject == "All Subjects" else selected_subject
-        )
+        st.session_state.selected_subject = selected_subject
 
         st.divider()
 

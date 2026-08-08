@@ -63,13 +63,74 @@ class APIClient:
 
         try:
             data = response.json()
-
         except requests.exceptions.JSONDecodeError as exc:
-            raise InvalidBackendResponseError(
-                "Backend returned an invalid JSON response."
-            ) from exc
+            raise InvalidBackendResponseError("Backend returned an invalid JSON response.") from exc
 
         return self._validate_response(data)
+
+    def generate_quiz(self, topic, subject=None, num_questions=None, difficulty=None):
+        try:
+            payload = {"topic": topic}
+            if subject:
+                payload["subject"] = subject
+            if num_questions:
+                payload["num_questions"] = num_questions
+            if difficulty:
+                payload["difficulty"] = difficulty
+
+            response = requests.post(
+                f"{self.base_url}/quiz/generate",
+                json=payload,
+                timeout=self.timeout,
+            )
+
+        except requests.exceptions.Timeout as exc:
+            raise BackendTimeoutError("The AI backend took too long to generate the quiz.") from exc
+
+        except requests.exceptions.ConnectionError as exc:
+            raise BackendConnectionError("Unable to connect to the AI backend.") from exc
+
+        except requests.exceptions.RequestException as exc:
+            raise APIClientError("An error occurred while communicating with the AI backend.") from exc
+
+        if not response.ok:
+            message = self._extract_error_message(response)
+            raise BackendResponseError(message)
+
+        try:
+            return response.json()
+        except requests.exceptions.JSONDecodeError as exc:
+            raise InvalidBackendResponseError("Backend returned an invalid JSON response.") from exc
+
+    def evaluate_quiz(self, quiz_questions, user_answers):
+        try:
+            payload = {
+                "quiz_questions": quiz_questions,
+                "user_answers": user_answers,
+            }
+            response = requests.post(
+                f"{self.base_url}/quiz/evaluate",
+                json=payload,
+                timeout=self.timeout,
+            )
+
+        except requests.exceptions.Timeout as exc:
+            raise BackendTimeoutError("The AI backend took too long to evaluate the quiz.") from exc
+
+        except requests.exceptions.ConnectionError as exc:
+            raise BackendConnectionError("Unable to connect to the AI backend.") from exc
+
+        except requests.exceptions.RequestException as exc:
+            raise APIClientError("An error occurred while communicating with the AI backend.") from exc
+
+        if not response.ok:
+            message = self._extract_error_message(response)
+            raise BackendResponseError(message)
+
+        try:
+            return response.json()
+        except requests.exceptions.JSONDecodeError as exc:
+            raise InvalidBackendResponseError("Backend returned an invalid JSON response.") from exc
 
     def _validate_response(self, data):
         if not isinstance(data, dict):
@@ -82,10 +143,8 @@ class APIClient:
         }
 
         for field, expected_type in required_fields.items():
-
             if field not in data:
                 raise InvalidBackendResponseError(f"Backend response is missing required field: '{field}'.")
-
             if not isinstance(data[field], expected_type):
                 raise InvalidBackendResponseError(f"Backend field '{field}' has an invalid type.")
 
@@ -97,12 +156,9 @@ class APIClient:
     def _extract_error_message(self, response):
         try:
             data = response.json()
-
             detail = data.get("detail")
-
             if isinstance(detail, str) and detail.strip():
                 return detail
-
         except (requests.exceptions.JSONDecodeError, ValueError):
             pass
 

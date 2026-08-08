@@ -2,6 +2,7 @@ import logging
 import streamlit as st
 
 from frontend.ui.api_client import APIClient
+from frontend.ui.sidebar import render_sidebar
 from frontend.ui.components import (
     render_header,
     render_welcome_state,
@@ -14,11 +15,12 @@ from frontend.ui.components import (
 logger = logging.getLogger(__name__)
 
 
-def render_chat_interface(api_client: APIClient):
+def render_learning_interface(api_client):
     """
-    Renders the conversational ChatGPT-style chat interface, managing
+    Renders the dedicated Learning Mode conversational interface, managing
     session state, prompt inputs, API client calls, loading states, and error handling.
     """
+    render_sidebar()
     render_header()
 
     if "messages" not in st.session_state:
