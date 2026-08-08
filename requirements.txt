@@ -13,3 +13,7 @@ python-multipart
 streamlit
 requests
 pytest
+rapidocr_onnxruntime
+easyocr
+Pillow
+numpy
