@@ -15,6 +15,8 @@ if not GROQ_API_KEY:
 LLM_MODEL = "llama-3.1-8b-instant"
 LLM_TEMPERATURE = 0.2
 LLM_MAX_TOKENS = 1024
+LEARNING_MAX_TOKENS = 1024
+QUIZ_MAX_TOKENS = 4096
 
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 200
@@ -34,7 +36,9 @@ DOCUMENTS_PATH = PROJECT_ROOT / "data" / "raw"
 
 VECTOR_DB_PATH = PROJECT_ROOT / "data" / "vector_store"
 COLLECTION_NAME = "learning_assistant"
+QUIZ_COLLECTION_NAME = "quiz_bank"
 
+QUIZ_DATA_PATH = PROJECT_ROOT / "data" / "raw" / "Quiz"
 KNOWLEDGE_BASE_PATH = PROJECT_ROOT / "knowledge_base"
 
 

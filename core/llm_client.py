@@ -52,12 +52,14 @@ class LLMClient:
                     f"Message at index {index} values for 'role' and 'content' cannot be empty or blank."
                 )
 
-    def generate_response(self, messages):
+    def generate_response(self, messages, max_tokens=None):
         self._validate_messages(messages)
 
-        self.logger.info("Generating LLM response...")
+        effective_max_tokens = max_tokens if max_tokens is not None else LLM_MAX_TOKENS
 
-        fallback_models = [self.model, "llama-3.2-3b-preview", "llama-3.2-1b-preview", "qwen-2.5-coder-32b", "llama-3.3-70b-versatile"]
+        self.logger.info(f"Generating LLM response (max_tokens: {effective_max_tokens})...")
+
+        fallback_models = [self.model, "llama-3.3-70b-versatile", "llama-3.1-8b-instant", "gemma2-9b-it"]
         seen_models = set()
 
         for current_model in fallback_models:
@@ -71,7 +73,7 @@ class LLMClient:
                     model=current_model,
                     messages=messages,
                     temperature=LLM_TEMPERATURE,
-                    max_completion_tokens=LLM_MAX_TOKENS,
+                    max_completion_tokens=effective_max_tokens,
                 )
 
                 answer = response.choices[0].message.content
