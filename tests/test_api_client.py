@@ -124,6 +124,59 @@ class TestAPIClient(unittest.TestCase):
         with self.assertRaises(InvalidBackendResponseError):
             self.client.send_message("Q")
 
+    @patch("frontend.ui.api_client.requests.post")
+    def test_generate_quiz_success(self, mock_post):
+        mock_resp = MagicMock()
+        mock_resp.ok = True
+        mock_resp.json.return_value = {
+            "topic": "Binary Search",
+            "difficulty": "Medium",
+            "questions": [{"id": 1, "question": "Q1"}],
+            "sources": [],
+            "is_relevant": True,
+            "message": "Success"
+        }
+        mock_post.return_value = mock_resp
+
+        res = self.client.generate_quiz("Binary Search", subject="DAA", num_questions=5, difficulty="Medium")
+
+        self.assertEqual(res["topic"], "Binary Search")
+        mock_post.assert_called_once_with(
+            "http://localhost:8000/quiz/generate",
+            json={
+                "topic": "Binary Search",
+                "subject": "DAA",
+                "num_questions": 5,
+                "difficulty": "Medium"
+            },
+            timeout=5,
+        )
+
+    @patch("frontend.ui.api_client.requests.post")
+    def test_evaluate_quiz_success(self, mock_post):
+        mock_resp = MagicMock()
+        mock_resp.ok = True
+        mock_resp.json.return_value = {
+            "score": 5,
+            "total": 5,
+            "percentage": 100.0,
+            "details": []
+        }
+        mock_post.return_value = mock_resp
+
+        res = self.client.evaluate_quiz([{"id": 1}], {"1": "A"})
+
+        self.assertEqual(res["score"], 5)
+        self.assertEqual(res["percentage"], 100.0)
+        mock_post.assert_called_once_with(
+            "http://localhost:8000/quiz/evaluate",
+            json={
+                "quiz_questions": [{"id": 1}],
+                "user_answers": {"1": "A"}
+            },
+            timeout=5,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

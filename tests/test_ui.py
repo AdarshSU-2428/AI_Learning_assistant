@@ -87,7 +87,8 @@ class TestUIComponents(unittest.TestCase):
         ui_modules = [
             "frontend.ui.components",
             "frontend.ui.sidebar",
-            "frontend.ui.chat_interface",
+            "frontend.ui.learning_interface",
+            "frontend.ui.quiz_interface",
             "frontend.frontend_app",
         ]
 
