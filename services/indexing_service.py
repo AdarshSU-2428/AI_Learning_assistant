@@ -79,11 +79,19 @@ class IndexingService:
 
             stored_count = self.vector_store.store(valid_docs, embeddings)
 
-            self.index_manager.register_document(
-                file_path=file_path, 
-                document_id=document_id, 
-                chunks=stored_count
-            )
+            is_quiz = "quiz" in file_path.lower() or "\\quiz\\" in file_path.lower() or "/quiz/" in file_path.lower()
+            if is_quiz:
+                self.index_manager.register_quiz_document(
+                    file_path=file_path, 
+                    document_id=document_id, 
+                    chunks=stored_count
+                )
+            else:
+                self.index_manager.register_document(
+                    file_path=file_path, 
+                    document_id=document_id, 
+                    chunks=stored_count
+                )
 
             self.logger.info(f"Successfully indexed {file_path}")
 
@@ -114,7 +122,10 @@ class IndexingService:
                         self.logger.warning(f"Skipping unsupported file: {file_path}")
                         continue
 
-                    if self.index_manager.is_document_indexed(file_path):
+                    is_quiz = "quiz" in file_path.lower() or "\\quiz\\" in file_path.lower() or "/quiz/" in file_path.lower()
+                    is_already_indexed = self.index_manager.is_quiz_indexed(file_path) if is_quiz else self.index_manager.is_document_indexed(file_path)
+
+                    if is_already_indexed:
                         self.logger.info(f"Skipping already indexed file: {file_path}")
                         continue
 

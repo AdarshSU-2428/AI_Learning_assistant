@@ -306,14 +306,21 @@ class QuizService:
 
     def _get_curated_quiz_questions(self, subject=None, difficulty=None, num_questions=None):
         try:
-            where_filter = {}
+            filters = []
             if subject:
-                where_filter["subject"] = subject
+                filters.append({"subject": subject})
             if difficulty and difficulty != "Standard":
-                where_filter["difficulty"] = difficulty
+                filters.append({"difficulty": difficulty})
+
+            if len(filters) == 1:
+                where_filter = filters[0]
+            elif len(filters) > 1:
+                where_filter = {"$and": filters}
+            else:
+                where_filter = None
 
             res = self.quiz_store.collection.get(
-                where=where_filter if where_filter else None,
+                where=where_filter,
                 include=["documents", "metadatas"]
             )
             metas = res.get("metadatas", [])
