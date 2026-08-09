@@ -20,14 +20,15 @@ class RetrievalConfig:
     def get_where_filter(self):
         filters = []
         if self.subject:
-            target = str(self.subject).strip().lower()
-            all_db_subjects = VectorStore().get_all_subjects()
+            target = str(self.subject).strip()
+            target_lower = target.lower()
+            cached = VectorStore._cached_subjects or []
 
             matched = []
-            for s in all_db_subjects:
+            for s in cached:
                 s_str = str(s).strip().lower()
                 initials = "".join(w[0] for w in s_str.split() if w.isalnum())
-                if target == s_str or target in s_str or s_str in target or target == initials:
+                if target_lower == s_str or target_lower in s_str or s_str in target_lower or target_lower == initials:
                     matched.append(s)
 
             if matched:
@@ -36,13 +37,15 @@ class RetrievalConfig:
                 else:
                     filters.append({"subject": {"$in": matched}})
             else:
-                filters.append({"subject": self.subject})
+                filters.append({"subject": target})
+
         if self.content_type:
             filters.append(
                 {
                     "content_type": self.content_type
                 }
             )
+            
         if self.source_type:
             filters.append(
                 {

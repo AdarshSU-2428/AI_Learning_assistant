@@ -45,15 +45,27 @@ class VectorStore:
 
             texts = [doc.page_content for doc in documents]
 
-            metadatas = [doc.metadata for doc in documents]
+            clean_metadatas = []
+            for doc in documents:
+                meta = doc.metadata or {}
+                clean_meta = {}
+                for k, v in meta.items():
+                    if v is None:
+                        clean_meta[k] = ""
+                    elif isinstance(v, (str, int, float, bool)):
+                        clean_meta[k] = v
+                    else:
+                        clean_meta[k] = str(v)
+                clean_metadatas.append(clean_meta)
 
             self.collection.add(
                 ids=ids,
                 documents=texts,
                 embeddings=embeddings.tolist(),
-                metadatas=metadatas
+                metadatas=clean_metadatas
             )
 
+            VectorStore._cached_subjects = None
             self.logger.info(f"Successfully stored {len(documents)} documents.")
 
             return len(documents)
@@ -105,8 +117,13 @@ class VectorStore:
         except Exception as e:
             self.logger.error(f"Similarity search failed: {e}")
             raise
+    
+    _cached_subjects = None
 
-    def get_all_subjects(self):
+    def get_all_subjects(self, force_refresh=False):
+        if VectorStore._cached_subjects is not None and not force_refresh:
+            return VectorStore._cached_subjects
+
         try:
             results = self.collection.get(include=["metadatas"])
             metadatas = results.get("metadatas", [])
@@ -114,7 +131,10 @@ class VectorStore:
             for m in metadatas:
                 if isinstance(m, dict) and "subject" in m and m["subject"]:
                     subjects.add(m["subject"])
-            return sorted(list(subjects))
+
+            VectorStore._cached_subjects = sorted(list(subjects))
+            return VectorStore._cached_subjects
+
         except Exception as e:
             self.logger.error(f"Failed to retrieve subjects from ChromaDB: {e}")
             return []
