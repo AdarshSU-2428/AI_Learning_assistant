@@ -17,16 +17,16 @@ def create_document_metadata(
     f_type = file_type or (Path(f_name).suffix.lower() if f_name != "Unknown" else "")
 
     return {
-        "document_id": document_id or "unknown_doc",
-        "subject": subject or "General",
-        "content_type": content_type or "notes",
-        "source_type": source_type or "college_notes",
-        "file_name": f_name,
-        "file_path": file_path or "",
-        "file_type": f_type,
-        "page": page,
-        "slide": slide,
-        "chunk_id": chunk_id or ""
+        "document_id": str(document_id or "unknown_doc"),
+        "subject": str(subject or "General"),
+        "content_type": str(content_type or "notes"),
+        "source_type": str(source_type or "college_notes"),
+        "file_name": str(f_name),
+        "file_path": str(file_path or ""),
+        "file_type": str(f_type),
+        "page": str(page) if page is not None else "",
+        "slide": str(slide) if slide is not None else "",
+        "chunk_id": str(chunk_id or "")
     }
 
 
@@ -47,14 +47,14 @@ def normalize_metadata(raw_metadata):
     chunk_id = raw_metadata.get("chunk_id") or ""
 
     return {
-        "document_id": doc_id,
-        "subject": subject,
-        "content_type": content_type,
-        "source_type": source_type,
-        "file_name": file_name,
-        "file_path": file_path,
-        "file_type": file_type,
-        "page": page,
-        "slide": slide,
-        "chunk_id": chunk_id
+        "document_id": str(doc_id),
+        "subject": str(subject),
+        "content_type": str(content_type),
+        "source_type": str(source_type),
+        "file_name": str(file_name),
+        "file_path": str(file_path),
+        "file_type": str(file_type),
+        "page": str(page) if page is not None else "",
+        "slide": str(slide) if slide is not None else "",
+        "chunk_id": str(chunk_id)
     }
