@@ -37,8 +37,11 @@ DOCUMENTS_PATH = PROJECT_ROOT / "data" / "raw"
 VECTOR_DB_PATH = PROJECT_ROOT / "data" / "vector_store"
 COLLECTION_NAME = "learning_assistant"
 QUIZ_COLLECTION_NAME = "quiz_bank"
+LAB_COLLECTION_NAME = "lab_manual"
 
 QUIZ_DATA_PATH = PROJECT_ROOT / "data" / "raw" / "Quiz"
+LAB_DATA_PATH = PROJECT_ROOT / "data" / "raw" / "Lab"
+
 KNOWLEDGE_BASE_PATH = PROJECT_ROOT / "knowledge_base"
 
 
