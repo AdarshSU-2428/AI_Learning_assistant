@@ -91,3 +91,29 @@ async def evaluate_quiz(request: QuizSubmissionRequest):
             status_code=500,
             detail="Internal Server Error",
         )
+
+
+@router.post(
+    "/lab/chat",
+    response_model=ChatResponse,
+    summary="Ask a practical experiment or coding lab question",
+)
+async def lab_chat(request: ChatRequest):
+    try:
+        response = app_service.lab_chat(
+            request.query, 
+            subject=request.subject
+        )
+        return response
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        )
+
+    except Exception:
+        raise HTTPException(
+            status_code=500,
+            detail="Internal Server Error",
+        )

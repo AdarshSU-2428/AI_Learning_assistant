@@ -11,6 +11,7 @@ class ChatResponse(BaseModel):
     query: str
     answer: str
     sources: list[Any] = []
+    is_relevant: bool = True
 
 
 class QuizRequest(BaseModel):
