@@ -68,6 +68,39 @@ class APIClient:
 
         return self._validate_response(data)
 
+    def send_lab_message(self, query, subject=None):
+        try:
+            payload = {"query": query}
+            if subject:
+                payload["subject"] = subject
+
+            response = requests.post(
+                f"{self.base_url}/lab/chat",
+                json=payload,
+                timeout=self.timeout,
+            )
+
+        except requests.exceptions.Timeout as exc:
+            raise BackendTimeoutError("The AI backend took too long to respond.") from exc
+
+        except requests.exceptions.ConnectionError as exc:
+            raise BackendConnectionError("Unable to connect to the AI backend.") from exc
+
+        except requests.exceptions.RequestException as exc:
+            raise APIClientError("An error occurred while communicating with the AI backend.") from exc
+
+        if not response.ok:
+            message = self._extract_error_message(response)
+            raise BackendResponseError(message)
+
+        try:
+            data = response.json()
+        except requests.exceptions.JSONDecodeError as exc:
+            raise InvalidBackendResponseError("Backend returned an invalid JSON response.") from exc
+
+        return self._validate_response(data)
+
+
     def generate_quiz(self, topic, subject=None, num_questions=None, difficulty=None):
         try:
             payload = {"topic": topic}
