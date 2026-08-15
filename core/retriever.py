@@ -65,11 +65,12 @@ class RetrievalConfig:
 
 
 class Retriever:
-    def __init__(self):
+    def __init__(self, collection_name=None):
         self.logger = get_logger(__name__)
 
         self.embedding_model = EmbeddingModel()
-        self.vector_store = VectorStore()
+        self.vector_store = VectorStore(collection_name=collection_name) if collection_name else VectorStore()
+
 
     def retrieve(self, query, config=None, top_k=None):
         self.logger.info("Starting document retrieval...")
