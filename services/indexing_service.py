@@ -16,7 +16,13 @@ from core.index_manager import IndexManager
 
 import json
 
-from config.settings import (QUIZ_COLLECTION_NAME, QUIZ_DATA_PATH, COLLECTION_NAME)
+from config.settings import (
+    QUIZ_COLLECTION_NAME, 
+    QUIZ_DATA_PATH, 
+    COLLECTION_NAME,
+    LAB_COLLECTION_NAME,
+    LAB_DATA_PATH
+)
 
 class IndexingService:
     def __init__(self):
@@ -33,6 +39,7 @@ class IndexingService:
         self.embedding_model = EmbeddingModel()
         self.vector_store = VectorStore(collection_name=COLLECTION_NAME)
         self.quiz_vector_store = VectorStore(collection_name=QUIZ_COLLECTION_NAME)
+        self.lab_vector_store = VectorStore(collection_name=LAB_COLLECTION_NAME)
         self.index_manager = IndexManager()
 
     def _index_document(self, file_path):
@@ -77,16 +84,27 @@ class IndexingService:
                 documents
             )
 
-            stored_count = self.vector_store.store(valid_docs, embeddings)
-
             is_quiz = "quiz" in file_path.lower() or "\\quiz\\" in file_path.lower() or "/quiz/" in file_path.lower()
+            is_lab = "lab" in file_path.lower() or "\\lab\\" in file_path.lower() or "/lab/" in file_path.lower()
+            
             if is_quiz:
+                stored_count = self.quiz_vector_store.store(valid_docs, embeddings)
                 self.index_manager.register_quiz_document(
                     file_path=file_path, 
                     document_id=document_id, 
                     chunks=stored_count
                 )
+
+            elif is_lab:
+                stored_count = self.lab_vector_store.store(valid_docs, embeddings)
+                self.index_manager.register_lab_document(
+                    file_path=file_path,
+                    document_id=document_id,
+                    chunks=stored_count
+                )
+                
             else:
+                stored_count = self.vector_store.store(valid_docs, embeddings)
                 self.index_manager.register_document(
                     file_path=file_path, 
                     document_id=document_id, 
@@ -123,7 +141,14 @@ class IndexingService:
                         continue
 
                     is_quiz = "quiz" in file_path.lower() or "\\quiz\\" in file_path.lower() or "/quiz/" in file_path.lower()
-                    is_already_indexed = self.index_manager.is_quiz_indexed(file_path) if is_quiz else self.index_manager.is_document_indexed(file_path)
+                    is_lab = "lab" in file_path.lower() or "\\lab\\" in file_path.lower() or "/lab/" in file_path.lower()
+
+                    if is_quiz:
+                        is_already_indexed = self.index_manager.is_quiz_indexed(file_path)
+                    elif is_lab:
+                        is_already_indexed = self.index_manager.is_lab_indexed(file_path)
+                    else:
+                        is_already_indexed = self.index_manager.is_document_indexed(file_path)
 
                     if is_already_indexed:
                         self.logger.info(f"Skipping already indexed file: {file_path}")
@@ -244,3 +269,17 @@ class IndexingService:
             "questions_stored": total_questions,
             "failed_files": failed
         }
+        
+    def index_lab_file(self, file_path):
+        self.logger.info(f"Indexing lab file: {file_path}")
+        return self._index_document(file_path)
+
+    def index_lab_directory(self, folder_path=None):
+        target_dir = folder_path or LAB_DATA_PATH
+        self.logger.info(f"Indexing lab directory: {target_dir}")
+
+        if not os.path.isdir(target_dir):
+            os.makedirs(target_dir, exist_ok=True)
+            return {"status": "success", "indexed_files": 0, "chunks_stored": 0}
+
+        return self.index_directory(target_dir)

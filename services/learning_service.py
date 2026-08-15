@@ -55,7 +55,7 @@ class LearningService:
                 self.logger.warning("Query rejected by RelevanceGate (out-of-syllabus or low confidence).")
                 return {
                     "query": sanitized_question,
-                    "answer": "I'm sorry, but this question does not appear to be covered in your uploaded course materials.",
+                    "answer": "I'm sorry, but this question does not appear to be covered in the curriculum syllabus for this course. Please verify your selected subject or rephrase your query.",
                     "sources": [],
                     "is_relevant": False
                 }
