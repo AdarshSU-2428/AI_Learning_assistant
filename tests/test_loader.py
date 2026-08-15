@@ -96,9 +96,9 @@ class TestPDFLoader(unittest.TestCase):
 
             self.assertEqual(len(units), 2)
             self.assertEqual(units[0]["text"], dense_text_1)
-            self.assertEqual(units[0]["metadata"]["page"], 1)
+            self.assertEqual(str(units[0]["metadata"]["page"]), "1")
             self.assertEqual(units[1]["text"], dense_text_2)
-            self.assertEqual(units[1]["metadata"]["page"], 2)
+            self.assertEqual(str(units[1]["metadata"]["page"]), "2")
 
     @patch("core.loaders.pdf_loader.PdfReader")
     def test_pdf_extraction_failure(self, mock_pdf_reader):

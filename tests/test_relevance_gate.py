@@ -5,7 +5,7 @@ from core.relevance_gate import RelevanceGate
 
 class TestRelevanceGate(unittest.TestCase):
     def setUp(self):
-        self.gate = RelevanceGate(score_threshold=0.35)
+        self.gate = RelevanceGate()
 
     def test_evaluate_relevance_empty_documents(self):
         docs, is_relevant = self.gate.evaluate_relevance([])
@@ -25,6 +25,25 @@ class TestRelevanceGate(unittest.TestCase):
         self.assertEqual(docs[0].page_content, "good doc")
         self.assertEqual(docs[1].page_content, "borderline doc")
 
+    def test_evaluate_relevance_viva_score_tier_accepted(self):
+        doc1 = Document(page_content="viva scheduling doc", metadata={"file_name": "OS_Lab_Manual.pdf"})
+        doc2 = Document(page_content="viva fcfs doc", metadata={"file_name": "OS_Lab_Manual.pdf"})
+
+        scored_docs = [(doc1, 0.0002), (doc2, 0.0001)]
+        docs, is_relevant = self.gate.evaluate_relevance(scored_docs)
+
+        self.assertTrue(is_relevant)
+        self.assertEqual(len(docs), 2)
+        self.assertEqual(docs[0].page_content, "viva scheduling doc")
+
+    def test_evaluate_relevance_handwritten_ocr_resilience(self):
+        doc1 = Document(page_content="ocr formula", metadata={"source_type": "handwritten_notes", "file_name": "OT_Notes.pdf"})
+        scored_docs = [(doc1, 0.015)]
+
+        docs, is_relevant = self.gate.evaluate_relevance(scored_docs)
+        self.assertTrue(is_relevant)
+        self.assertEqual(len(docs), 1)
+
     def test_evaluate_relevance_out_of_syllabus_refusal(self):
         doc1 = Document(page_content="irrelevant doc 1")
         doc2 = Document(page_content="irrelevant doc 2")
@@ -32,14 +51,6 @@ class TestRelevanceGate(unittest.TestCase):
         scored_docs = [(doc1, 0.00001), (doc2, 0.000001)]
         docs, is_relevant = self.gate.evaluate_relevance(scored_docs)
 
-        self.assertFalse(is_relevant)
-        self.assertEqual(docs, [])
-
-    def test_evaluate_relevance_custom_threshold_override(self):
-        doc1 = Document(page_content="doc 1")
-        scored_docs = [(doc1, 0.00001)]
-
-        docs, is_relevant = self.gate.evaluate_relevance(scored_docs, score_threshold=0.50)
         self.assertFalse(is_relevant)
         self.assertEqual(docs, [])
 

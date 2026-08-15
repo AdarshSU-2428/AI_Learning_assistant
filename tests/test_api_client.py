@@ -177,6 +177,39 @@ class TestAPIClient(unittest.TestCase):
             timeout=5,
         )
 
+    @patch("frontend.ui.api_client.requests.post")
+    def test_send_lab_message_success(self, mock_post):
+        mock_resp = MagicMock()
+        mock_resp.ok = True
+        mock_resp.json.return_value = {
+            "query": "Implement SJF",
+            "answer": "SJF implementation...",
+            "sources": [],
+            "is_relevant": True
+        }
+        mock_post.return_value = mock_resp
+
+        res = self.client.send_lab_message("Implement SJF", subject="OS")
+
+        self.assertEqual(res["answer"], "SJF implementation...")
+        self.assertTrue(res["is_relevant"])
+        mock_post.assert_called_once_with(
+            "http://localhost:8000/lab/chat",
+            json={"query": "Implement SJF", "subject": "OS"},
+            timeout=5,
+        )
+
+    @patch("frontend.ui.api_client.requests.post")
+    def test_send_lab_message_error(self, mock_post):
+        mock_resp = MagicMock()
+        mock_resp.ok = False
+        mock_resp.status_code = 400
+        mock_resp.json.return_value = {"detail": "Invalid question"}
+        mock_post.return_value = mock_resp
+
+        with self.assertRaises(BackendResponseError):
+            self.client.send_lab_message("Bad question")
+
 
 if __name__ == "__main__":
     unittest.main()

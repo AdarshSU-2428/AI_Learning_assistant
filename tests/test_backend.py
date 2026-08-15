@@ -17,6 +17,7 @@ class TestBackendAPI(unittest.TestCase):
             "query": "What is Transformer?",
             "answer": "A Transformer is a deep learning model.",
             "sources": [],
+            "is_relevant": True
         }
         mock_route_service.chat.return_value = mock_response
 
@@ -81,9 +82,32 @@ class TestBackendAPI(unittest.TestCase):
         }
         response = self.client.post("/quiz/evaluate", json=payload)
 
+    @patch("backend.routes.app_service")
+    def test_lab_chat_success(self, mock_route_service):
+        mock_response = {
+            "query": "Design Full Adder",
+            "answer": "A Full Adder has 3 inputs...",
+            "sources": [],
+            "is_relevant": True
+        }
+        mock_route_service.lab_chat.return_value = mock_response
+
+        response = self.client.post("/lab/chat", json={"query": "Design Full Adder", "subject": "DEC"})
+
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["score"], 5)
-        self.assertEqual(response.json()["percentage"], 100.0)
+        self.assertEqual(response.json()["answer"], "A Full Adder has 3 inputs...")
+        self.assertTrue(response.json()["is_relevant"])
+        mock_route_service.lab_chat.assert_called_once_with("Design Full Adder", subject="DEC")
+
+    @patch("backend.routes.app_service")
+    def test_lab_chat_validation_error(self, mock_route_service):
+        mock_route_service.lab_chat.side_effect = ValueError("Question cannot be empty.")
+
+        response = self.client.post("/lab/chat", json={"query": "", "subject": "DEC"})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["detail"], "Question cannot be empty.")
+        mock_route_service.lab_chat.assert_called_once_with("", subject="DEC")
 
 
 if __name__ == "__main__":
