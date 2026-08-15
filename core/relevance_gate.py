@@ -43,7 +43,9 @@ class RelevanceGate:
                     doc for doc, score in scored_documents[:12] if score >= 0.001
                 ]
             else:
-                accepted_documents = []
+                accepted_documents = [
+                    doc for doc, score in scored_documents[:10] if score >= 0.00005
+                ]
 
             if not accepted_documents:
                 self.logger.info(f"No documents passed relevance gate (top score: {top_score:.4f}).")

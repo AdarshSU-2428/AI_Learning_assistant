@@ -15,7 +15,7 @@ class VectorStore:
         self.logger = get_logger(__name__)
 
         self.persist_directory = persist_directory
-        self.collection_name = collection_name
+        self.collection_name = collection_name or COLLECTION_NAME
 
         try:
             self.logger.info("Initializing ChromaDB...")
@@ -23,6 +23,7 @@ class VectorStore:
             self.client = chromadb.PersistentClient(path=self.persist_directory)
 
             self.collection = self.client.get_or_create_collection(name=self.collection_name)
+            self.get_all_subjects(force_refresh=True)
 
             self.logger.info(f"Collection '{self.collection_name}' loaded successfully.")
 
@@ -125,16 +126,30 @@ class VectorStore:
             return VectorStore._cached_subjects
 
         try:
-            results = self.collection.get(include=["metadatas"])
-            metadatas = results.get("metadatas", [])
             subjects = set()
-            for m in metadatas:
-                if isinstance(m, dict) and "subject" in m and m["subject"]:
-                    subjects.add(m["subject"])
+            from config.settings import DOCUMENTS_PATH, LAB_DATA_PATH, QUIZ_DATA_PATH
+            check_dirs = [
+                DOCUMENTS_PATH / "Notes",
+                LAB_DATA_PATH / "Lab Assignments",
+                LAB_DATA_PATH / "Lab Manuals",
+                QUIZ_DATA_PATH
+            ]
+            for p in check_dirs:
+                if p.exists():
+                    for entry in p.iterdir():
+                        if entry.is_dir() and entry.name.lower() not in ("__pycache__", ".git", ".idea"):
+                            subjects.add(entry.name)
+
+            if not subjects:
+                results = self.collection.get(include=["metadatas"])
+                metadatas = results.get("metadatas", [])
+                for m in metadatas:
+                    if isinstance(m, dict) and "subject" in m and m["subject"]:
+                        subjects.add(m["subject"])
 
             VectorStore._cached_subjects = sorted(list(subjects))
             return VectorStore._cached_subjects
 
         except Exception as e:
-            self.logger.error(f"Failed to retrieve subjects from ChromaDB: {e}")
+            self.logger.error(f"Failed to retrieve subjects: {e}")
             return []
