@@ -165,6 +165,36 @@ class APIClient:
         except requests.exceptions.JSONDecodeError as exc:
             raise InvalidBackendResponseError("Backend returned an invalid JSON response.") from exc
 
+    def generate_exam(self, subject, num_questions=None, timeout=300):
+        try:
+            payload = {
+                "subject": subject,
+                "num_questions": num_questions,
+            }
+            response = requests.post(
+                f"{self.base_url}/exam/generate",
+                json=payload,
+                timeout=timeout or self.timeout,
+            )
+
+        except requests.exceptions.Timeout as exc:
+            raise BackendTimeoutError("The AI backend took too long to generate the exam paper.") from exc
+
+        except requests.exceptions.ConnectionError as exc:
+            raise BackendConnectionError("Unable to connect to the AI backend.") from exc
+
+        except requests.exceptions.RequestException as exc:
+            raise APIClientError("An error occurred while communicating with the AI backend.") from exc
+
+        if not response.ok:
+            message = self._extract_error_message(response)
+            raise BackendResponseError(message)
+
+        try:
+            return response.json()
+        except requests.exceptions.JSONDecodeError as exc:
+            raise InvalidBackendResponseError("Backend returned an invalid JSON response.") from exc
+
     def _validate_response(self, data):
         if not isinstance(data, dict):
             raise InvalidBackendResponseError("Backend response must be a JSON object.")

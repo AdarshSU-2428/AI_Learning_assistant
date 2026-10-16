@@ -77,6 +77,16 @@ def render_quiz_interface(api_client):
     col_sub1, col_sub2 = st.columns([2, 1])
     with col_sub1:
         submit_quiz = st.button("✅ Submit Answers", type="primary", use_container_width=True)
+    with col_sub2:
+        reset_quiz = st.button("🔄 Reset Quiz", type="secondary", use_container_width=True)
+
+    if reset_quiz:
+        st.session_state.quiz_evaluation = None
+        st.session_state.user_answers = {}
+        for key in list(st.session_state.keys()):
+            if key.startswith("opt_radio_"):
+                st.session_state.pop(key, None)
+        st.rerun()
 
     if submit_quiz:
         with st.spinner("Grading your submission..."):

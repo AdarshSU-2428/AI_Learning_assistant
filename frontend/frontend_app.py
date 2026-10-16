@@ -10,9 +10,6 @@ import streamlit as st
 from frontend.ui.api_client import APIClient
 from frontend.ui.components import inject_custom_css, render_header, render_home_about
 from frontend.ui.sidebar import SidebarManager
-from frontend.ui.learning_interface import render_learning_interface
-from frontend.ui.quiz_interface import render_quiz_interface
-from frontend.ui.lab_interface import render_lab_interface
 
 # Streamlit Page Configuration
 st.set_page_config(
@@ -41,13 +38,19 @@ def main():
     if "active_mode" not in st.session_state:
         st.session_state.active_mode = "home"
 
-    # Route to Selected Mode
+    # Dynamic Mode Routing (Imports lazily on demand so Home Hub loads instantly)
     if st.session_state.active_mode == "learning":
+        from frontend.ui.learning_interface import render_learning_interface
         render_learning_interface(api_client)
     elif st.session_state.active_mode == "quiz":
+        from frontend.ui.quiz_interface import render_quiz_interface
         render_quiz_interface(api_client)
     elif st.session_state.active_mode == "lab":
+        from frontend.ui.lab_interface import render_lab_interface
         render_lab_interface(api_client)
+    elif st.session_state.active_mode == "exam":
+        from frontend.ui.exam_interface import render_exam_interface
+        render_exam_interface(api_client)
     else:
         render_home_hub()
 

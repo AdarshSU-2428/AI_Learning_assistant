@@ -174,19 +174,19 @@ def render_home_about():
         unsafe_allow_html=True,
     )
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
 
     with col1:
         with st.container(border=True):
             st.markdown(
                 """
                 <div style="display: flex; flex-direction: column; flex: 1 1 auto;">
-                    <h4 style="margin-top: 0; margin-bottom: 0.6rem; font-size: 1.2rem; font-weight: 700;">🎓 Learning Mode</h4>
+                    <h4 style="margin-top: 0; margin-bottom: 0.6rem; font-size: 1.15rem; font-weight: 700;">🎓 Learning Mode</h4>
                     <ul class="mode-card-list">
-                        <li><strong>Concept Q&A</strong> with your lecture slides and textbook materials</li>
-                        <li><strong>Exact Citations</strong> with verified slide and page numbers</li>
-                        <li><strong>Algorithmic Tracing</strong> & mathematical formulas in LaTeX</li>
-                        <li><strong>Syllabus Shielding</strong> against out-of-scope study queries</li>
+                        <li><strong>Concept Q&A</strong> with lecture slides & notes</li>
+                        <li><strong>Exact Citations</strong> with slide & page numbers</li>
+                        <li><strong>Algorithmic Tracing</strong> & LaTeX formulas</li>
+                        <li><strong>Syllabus Shielding</strong> against out-of-scope queries</li>
                     </ul>
                 </div>
                 """,
@@ -201,12 +201,12 @@ def render_home_about():
             st.markdown(
                 """
                 <div style="display: flex; flex-direction: column; flex: 1 1 auto;">
-                    <h4 style="margin-top: 0; margin-bottom: 0.6rem; font-size: 1.2rem; font-weight: 700;">🎯 Quiz Mode</h4>
+                    <h4 style="margin-top: 0; margin-bottom: 0.6rem; font-size: 1.15rem; font-weight: 700;">🎯 Quiz Mode</h4>
                     <ul class="mode-card-list">
-                        <li><strong>Interactive MCQ Studio</strong> from our verified question bank</li>
-                        <li><strong>Dynamic Difficulty</strong> settings (Easy, Medium, Hard)</li>
-                        <li><strong>Custom Question Counts</strong> from 3 up to 30 questions</li>
-                        <li><strong>Auto-Grading</strong> with hints & step-by-step explanations</li>
+                        <li><strong>Interactive MCQ Studio</strong> from question bank</li>
+                        <li><strong>Dynamic Difficulty</strong> (Easy, Medium, Hard)</li>
+                        <li><strong>Custom Counts</strong> from 3 up to 30 questions</li>
+                        <li><strong>Auto-Grading</strong> with hints & explanations</li>
                     </ul>
                 </div>
                 """,
@@ -221,12 +221,12 @@ def render_home_about():
             st.markdown(
                 """
                 <div style="display: flex; flex-direction: column; flex: 1 1 auto;">
-                    <h4 style="margin-top: 0; margin-bottom: 0.6rem; font-size: 1.2rem; font-weight: 700;">🧪 Lab Mode</h4>
+                    <h4 style="margin-top: 0; margin-bottom: 0.6rem; font-size: 1.15rem; font-weight: 700;">🧪 Lab Mode</h4>
                     <ul class="mode-card-list">
-                        <li><strong>Runnable Code Solutions</strong> with complexity & test cases</li>
-                        <li><strong>Circuit Walkthroughs</strong> with pinouts and truth tables</li>
-                        <li><strong>Observation Tables</strong> and experimental error formulas</li>
-                        <li><strong>Viva Voce Oral Prep</strong> with high-yield model answers</li>
+                        <li><strong>Runnable Programs</strong> with test cases & complexity</li>
+                        <li><strong>Circuit Walkthroughs</strong> & pinout diagrams</li>
+                        <li><strong>Observation Tables</strong> & error formulas</li>
+                        <li><strong>Viva Voce Oral Prep</strong> with model answers</li>
                     </ul>
                 </div>
                 """,
@@ -234,6 +234,26 @@ def render_home_about():
             )
             if st.button("Open Lab Mode ➔", key="home_btn_lab", type="primary", use_container_width=True):
                 st.session_state.active_mode = "lab"
+                st.rerun()
+
+    with col4:
+        with st.container(border=True):
+            st.markdown(
+                """
+                <div style="display: flex; flex-direction: column; flex: 1 1 auto;">
+                    <h4 style="margin-top: 0; margin-bottom: 0.6rem; font-size: 1.15rem; font-weight: 700;">📝 Exam Mode</h4>
+                    <ul class="mode-card-list">
+                        <li><strong>PYQ Exam Papers</strong> (1, 3, 5 Marks)</li>
+                        <li><strong>Random Shuffling</strong> of syllabus questions</li>
+                        <li><strong>Physical Paper Practice</strong> workflow</li>
+                        <li><strong>Model Answers & Rubrics</strong> for self-rating</li>
+                    </ul>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            if st.button("Open Exam Mode ➔", key="home_btn_exam", type="primary", use_container_width=True):
+                st.session_state.active_mode = "exam"
                 st.rerun()
 
     st.markdown("---")
