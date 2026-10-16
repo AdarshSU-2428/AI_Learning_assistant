@@ -12,6 +12,8 @@ ENV/
 logs/
 *.log
 
+docs/
+
 .vscode/
 
 notes/
@@ -21,3 +23,5 @@ data/
 knowledge_base/
 
 .pytest_cache/
+
+
