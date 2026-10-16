@@ -4,20 +4,23 @@ from services.app_service import ApplicationService
 
 
 class TestApplicationService(unittest.TestCase):
+    @patch("services.app_service.ExamService")
     @patch("services.app_service.LabService")
     @patch("services.app_service.QuizService")
     @patch("services.app_service.LearningService")
     @patch("services.app_service.IndexingService")
-    def setUp(self, mock_indexing_cls, mock_learning_cls, mock_quiz_cls, mock_lab_cls):
+    def setUp(self, mock_indexing_cls, mock_learning_cls, mock_quiz_cls, mock_lab_cls, mock_exam_cls):
         self.mock_learning = MagicMock()
         self.mock_indexing = MagicMock()
         self.mock_quiz = MagicMock()
         self.mock_lab = MagicMock()
+        self.mock_exam = MagicMock()
 
         mock_learning_cls.return_value = self.mock_learning
         mock_indexing_cls.return_value = self.mock_indexing
         mock_quiz_cls.return_value = self.mock_quiz
         mock_lab_cls.return_value = self.mock_lab
+        mock_exam_cls.return_value = self.mock_exam
 
         self.service = ApplicationService()
 
@@ -26,18 +29,21 @@ class TestApplicationService(unittest.TestCase):
         self.assertEqual(self.service.indexing_service, self.mock_indexing)
         self.assertEqual(self.service.quiz_service, self.mock_quiz)
         self.assertEqual(self.service.lab_service, self.mock_lab)
+        self.assertEqual(self.service.exam_service, self.mock_exam)
 
     def test_index_documents(self):
         self.mock_indexing.index_directory.return_value = {"status": "success"}
         self.mock_indexing.index_quiz_directory.return_value = {"status": "success"}
         self.mock_indexing.index_lab_directory.return_value = {"status": "success"}
+        self.mock_indexing.index_exam_directory.return_value = {"status": "success"}
 
         result = self.service.index_documents("dummy/path")
 
         self.assertEqual(result, {
             "notes": {"status": "success"},
             "quiz": {"status": "success"},
-            "lab": {"status": "success"}
+            "lab": {"status": "success"},
+            "exam": {"status": "success"}
         })
         self.mock_indexing.index_directory.assert_called_once_with("dummy/path")
 

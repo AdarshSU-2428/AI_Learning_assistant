@@ -65,6 +65,19 @@ class TestSidebar(unittest.TestCase):
                 SidebarManager.render_lab_sidebar()
                 self.assertEqual(state.selected_lab_subject, "OS")
 
+    @patch("streamlit.sidebar")
+    def test_render_exam_sidebar(self, mock_sidebar):
+        state = MockSessionState()
+        mock_api = MagicMock()
+        with patch("streamlit.session_state", state):
+            with patch("streamlit.button", return_value=False), \
+                 patch("streamlit.selectbox", return_value="DAA"), \
+                 patch("streamlit.slider", return_value=5), \
+                 patch("streamlit.markdown"), \
+                 patch("streamlit.caption"), \
+                 patch("streamlit.divider"):
+                SidebarManager.render_exam_sidebar(mock_api)
+
 
 if __name__ == "__main__":
     unittest.main()

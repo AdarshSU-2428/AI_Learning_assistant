@@ -8,6 +8,7 @@ from config.settings import RERANK_TOP_K
 class TestReranker(unittest.TestCase):
     @patch("core.reranker.CrossEncoder")
     def setUp(self, mock_cross_encoder):
+        Reranker._instance = None
         self.mock_model_instance = MagicMock()
         mock_cross_encoder.return_value = self.mock_model_instance
         self.reranker = Reranker()

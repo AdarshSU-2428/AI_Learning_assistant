@@ -114,6 +114,7 @@ class TestVectorStore(unittest.TestCase):
         import numpy as np
         query_embedding = np.array([0.1, 0.2])
         self.mock_collection.query.side_effect = RuntimeError("Query failed")
+        self.mock_collection.get.side_effect = RuntimeError("Fallback failed")
 
         with self.assertRaises(RuntimeError):
             self.vector_store.similarity_search(query_embedding, top_k=2)
