@@ -9,13 +9,13 @@ class TestLogger(unittest.TestCase):
         """Ensure the logs directory is clean before each test."""
         logging.shutdown()
         if os.path.exists("logs"):
-            shutil.rmtree("logs")
+            shutil.rmtree("logs", ignore_errors=True)
 
     def tearDown(self):
         """Ensure the logs directory is clean after each test."""
         logging.shutdown()
         if os.path.exists("logs"):
-            shutil.rmtree("logs")
+            shutil.rmtree("logs", ignore_errors=True)
 
     def test_logger_initialization(self):
         logger = get_logger("test_logger")

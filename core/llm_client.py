@@ -10,11 +10,11 @@ from config.settings import (
 )
 
 class LLMClient:
-    def __init__(self):
+    def __init__(self, model=None):
         self.logger = get_logger(__name__)
 
         self.client = Groq(api_key=GROQ_API_KEY)
-        self.model = LLM_MODEL
+        self.model = model or LLM_MODEL
 
         self.logger.info(
             "LLM Client initialized successfully "
@@ -52,26 +52,52 @@ class LLMClient:
                     f"Message at index {index} values for 'role' and 'content' cannot be empty or blank."
                 )
 
-    def generate_response(self, messages):
+    def generate_response(self, messages, model=None, max_tokens=None):
         self._validate_messages(messages)
 
-        self.logger.info("Generating LLM response...")
+        requested_tokens = max_tokens if max_tokens is not None else LLM_MAX_TOKENS
+        effective_max_tokens = min(requested_tokens, 4096)
+        target = model or self.model or "qwen/qwen3.8-27b"
 
-        try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                temperature=LLM_TEMPERATURE,
-                max_completion_tokens=LLM_MAX_TOKENS,
+        fallback_models = [
+            target,
+            "qwen/qwen3.8-27b",
+            "openai/gpt-oss-120b",
+            "openai/gpt-oss-20b"
+        ]
+        seen_models = set()
+        last_error = None
+
+        for current_model in fallback_models:
+            if current_model in seen_models:
+                continue
+            seen_models.add(current_model)
+
+            try:
+                self.logger.info(f"Attempting response generation with model: {current_model}")
+                response = self.client.chat.completions.create(
+                    model=current_model,
+                    messages=messages,
+                    temperature=LLM_TEMPERATURE,
+                    max_completion_tokens=effective_max_tokens,
+                )
+
+                answer = response.choices[0].message.content
+                self.logger.info(f"LLM response generated successfully with model: {current_model}")
+                return answer
+
+            except Exception as e:
+                last_error = e
+                err_str = str(e)
+                if "429" in err_str or "rate_limit" in err_str:
+                    self.logger.warning(f"Model {current_model} rate-limited (HTTP 429). Trying next fallback model...")
+                else:
+                    self.logger.warning(f"Model {current_model} call failed ({e}). Trying next fallback model...")
+                continue
+
+        self.logger.error(f"Failed to generate response from LLM. All fallback models failed. Last error: {last_error}")
+        if last_error and ("429" in str(last_error) or "rate_limit" in str(last_error)):
+            raise ValueError(
+                "Groq API rate limit reached. Please wait a minute or add a new GROQ_API_KEY in your .env file."
             )
-
-            answer = response.choices[0].message.content
-
-            self.logger.info("LLM response generated successfully.")
-
-            return answer
-
-        except Exception as e:
-            self.logger.exception("Failed to generate response from LLM.")
-            raise
-    
+        raise ValueError(f"Groq API call failed across all models. Last error: {last_error}")

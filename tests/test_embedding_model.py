@@ -6,6 +6,7 @@ from core.embedding_model import EmbeddingModel
 class TestEmbeddingModel(unittest.TestCase):
     @patch("core.embedding_model.SentenceTransformer")
     def setUp(self, mock_transformer):
+        EmbeddingModel._instance = None
         self.mock_model_instance = MagicMock()
         mock_transformer.return_value = self.mock_model_instance
         self.embedding_model = EmbeddingModel()

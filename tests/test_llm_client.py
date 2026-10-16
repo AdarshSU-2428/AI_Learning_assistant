@@ -98,7 +98,7 @@ class TestLLMClient(unittest.TestCase):
         with self.assertRaises(Exception):
             self.llm_client.generate_response(messages)
 
-        self.llm_client.logger.exception.assert_called_once_with("Failed to generate response from LLM.")
+        self.llm_client.logger.exception.assert_called_once_with(f"Failed to generate response from LLM using {LLM_MODEL}.")
 
 if __name__ == "__main__":
     unittest.main()

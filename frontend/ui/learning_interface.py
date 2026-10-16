@@ -2,9 +2,10 @@ import logging
 import streamlit as st
 
 from frontend.ui.api_client import APIClient
+from frontend.ui.sidebar import SidebarManager
 from frontend.ui.components import (
     render_header,
-    render_welcome_state,
+    render_learning_about,
     render_user_message,
     render_assistant_message,
     get_user_friendly_error_message,
@@ -14,21 +15,26 @@ from frontend.ui.components import (
 logger = logging.getLogger(__name__)
 
 
-def render_chat_interface(api_client: APIClient):
+def render_learning_interface(api_client):
     """
-    Renders the conversational ChatGPT-style chat interface, managing
-    session state, prompt inputs, API client calls, loading states, and error handling.
+    Renders the dedicated Learning Mode conversational interface.
+    Displays the About section initially, replacing it dynamically with the active
+    chat stream as soon as questions are asked.
     """
-    render_header()
+    SidebarManager.render_learning_sidebar()
+    render_header(
+        title="🎓 Learning Mode",
+        subtitle="Ask conceptual questions grounded strictly in your course lecture slides and textbooks"
+    )
 
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    # Display empty welcome state if no conversation history exists
+    # Display About section if no conversation history exists
     if not st.session_state.messages:
-        render_welcome_state()
+        render_learning_about()
     else:
-        # Render conversation history
+        # Render active conversation history
         for msg in st.session_state.messages:
             if msg["role"] == "user":
                 render_user_message(msg["content"])
@@ -36,7 +42,7 @@ def render_chat_interface(api_client: APIClient):
                 render_assistant_message(msg["content"], msg.get("sources"))
 
     # Chat input box
-    prompt = st.chat_input("Ask a question about your study materials...")
+    prompt = st.chat_input("Ask a concept question about your study materials...")
 
     if prompt is not None:
         cleaned_prompt = prompt.strip()
@@ -49,9 +55,10 @@ def render_chat_interface(api_client: APIClient):
         render_user_message(cleaned_prompt)
 
         # Call APIClient inside thinking state
-        with st.spinner("Thinking..."):
+        with st.spinner("Analyzing lecture notes and preparing response..."):
             try:
-                response = api_client.send_message(cleaned_prompt)
+                selected_subject = st.session_state.get("selected_subject")
+                response = api_client.send_message(cleaned_prompt, subject=selected_subject)
                 answer = response.get("answer", "")
                 sources = response.get("sources", [])
 

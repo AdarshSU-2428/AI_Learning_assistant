@@ -9,9 +9,7 @@ from config.settings import DOCUMENTS_PATH
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
-    app_service.index_documents(DOCUMENTS_PATH)
-
+async def lifespan(app):
     yield
 
 

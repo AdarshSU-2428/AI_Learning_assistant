@@ -1,12 +1,13 @@
 from utils.logger import get_logger
-from langchain_core.documents import Document
+from core.context_builder import ContextBuilder
 
 
 class PromptBuilder:
     def __init__(self):
         self.logger = get_logger(__name__)
+        self.context_builder = ContextBuilder()
 
-    def build_messages(self, system_prompt, user_prompt, user_input, documents):
+    def build_messages(self, system_prompt, user_prompt, user_input, documents, subject=None):
         self.logger.info("Building messages...")
 
         try:
@@ -19,17 +20,32 @@ class PromptBuilder:
             if not isinstance(user_prompt, str):
                 raise TypeError("User prompt must be a string.")
 
-            context = self._build_context(documents)
+            context = self.context_builder.build_context(documents)
+
+            formatted_system_prompt = system_prompt
+            if subject and isinstance(subject, str) and subject.strip():
+                clean_subj = subject.strip()
+                subject_instruction = (
+                    f"\n\nCURRENT COURSE SUBJECT SCOPE:\n"
+                    f"The user has selected the course subject: '{clean_subj}'.\n"
+                    f"- Answer questions using the retrieved materials and concepts relevant to '{clean_subj}'.\n"
+                    f"- For programming and algorithm courses (such as DAA, OS, AI), you are free to provide implementations in requested programming languages (like C, C++, Python, or Java).\n"
+                    f"- If the question asks about a completely unrelated course domain (such as asking about Biology while in Python, or asking about SQL database tables while in Digital Electronics), politely guide the user to select the appropriate course subject from the sidebar."
+                )
+                formatted_system_prompt = formatted_system_prompt + subject_instruction
 
             user_content = user_prompt.format(
                 context=context,
                 question=user_input
             )
 
+            if subject and isinstance(subject, str) and subject.strip():
+                user_content = f"[Selected Course Subject: {subject.strip()}]\n\n" + user_content
+
             messages = [
                 {
                     "role": "system",
-                    "content": system_prompt
+                    "content": formatted_system_prompt
                 },
                 {
                     "role": "user",
@@ -44,48 +60,3 @@ class PromptBuilder:
         except Exception as e:
             self.logger.error(f"Failed to build messages: {e}")
             raise
-
-    def _build_context(self, documents):
-
-        if not documents:
-            self.logger.warning("No context documents received.")
-            return ""
-
-        context_parts = []
-
-        for index, document in enumerate(documents, start=1):
-            if not isinstance(document, Document):
-                raise TypeError(f"Item at index {index} is not a LangChain Document.")
-
-            metadata = document.metadata or {}
-
-            source = (
-                metadata.get("file_name") or
-                (metadata.get("file_path") or metadata.get("source") or "")
-                .replace("\\", "/")
-                .split("/")[-1] or
-                "Unknown"
-            )
-
-            page = metadata.get("page")
-
-            document_context = [
-                f"Document {index}",
-                f"Source : {source}",
-            ]
-
-            if page is not None:
-                document_context.append(f"Page   : {page}")
-
-            page_content = str(document.page_content) if document.page_content is not None else ""
-
-            document_context.extend([
-                "",
-                "Content :",
-                page_content,
-                "-" * 60
-            ])
-
-            context_parts.append("\n".join(document_context))
-
-        return "\n\n".join(context_parts)

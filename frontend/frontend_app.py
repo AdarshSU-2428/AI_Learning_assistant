@@ -8,9 +8,8 @@ if str(root_dir) not in sys.path:
 
 import streamlit as st
 from frontend.ui.api_client import APIClient
-from frontend.ui.components import inject_custom_css
-from frontend.ui.sidebar import render_sidebar
-from frontend.ui.chat_interface import render_chat_interface
+from frontend.ui.components import inject_custom_css, render_header, render_home_about
+from frontend.ui.sidebar import SidebarManager
 
 # Streamlit Page Configuration
 st.set_page_config(
@@ -21,8 +20,40 @@ st.set_page_config(
 )
 
 
+def render_home_hub():
+    """Renders the main interactive landing page with sidebar navigation and central About section."""
+    SidebarManager.render_home_sidebar()
+    render_header(
+        title="🎓 AI Learning Assistant",
+        subtitle="Your autonomous university study companion grounded strictly in course documents"
+    )
+    render_home_about()
+
+
 def main():
     inject_custom_css()
     api_client = APIClient(base_url=None)
-    render_sidebar()
-    render_chat_interface(api_client)
+
+    # Initialize Active Mode State (defaults to 'home')
+    if "active_mode" not in st.session_state:
+        st.session_state.active_mode = "home"
+
+    # Dynamic Mode Routing (Imports lazily on demand so Home Hub loads instantly)
+    if st.session_state.active_mode == "learning":
+        from frontend.ui.learning_interface import render_learning_interface
+        render_learning_interface(api_client)
+    elif st.session_state.active_mode == "quiz":
+        from frontend.ui.quiz_interface import render_quiz_interface
+        render_quiz_interface(api_client)
+    elif st.session_state.active_mode == "lab":
+        from frontend.ui.lab_interface import render_lab_interface
+        render_lab_interface(api_client)
+    elif st.session_state.active_mode == "exam":
+        from frontend.ui.exam_interface import render_exam_interface
+        render_exam_interface(api_client)
+    else:
+        render_home_hub()
+
+
+if __name__ == "__main__":
+    main()

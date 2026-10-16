@@ -1,6 +1,7 @@
 from pptx import Presentation
 
 from core.loaders.loader import BaseLoader
+from core.metadata import create_document_metadata
 from config.settings import PDF_SLIDE_WINDOW_SIZE
 
 
@@ -15,6 +16,8 @@ class PPTLoader(BaseLoader):
         try:
             presentation = Presentation(self.file_path)
             raw_slides = []
+
+            subject, content_type, source_type = self.infer_metadata_attributes()
 
             for slide_num, slide in enumerate(presentation.slides, start=1):
                 slide_text = ""
@@ -41,23 +44,43 @@ class PPTLoader(BaseLoader):
                         start_s if start_s == end_s else f"{start_s}-{end_s}"
                     )
 
+                    meta = create_document_metadata(
+                        file_name=self.file_path.name,
+                        file_path=str(self.file_path),
+                        page=slide_meta,
+                        slide=slide_meta,
+                        subject=subject,
+                        content_type=content_type,
+                        source_type=source_type
+                    )
+
                     units.append(
                         {
                             "text": combined_text,
-                            "metadata": {"slide": slide_meta},
+                            "metadata": meta,
                         }
                     )
             else:
                 for slide_num, slide_text in raw_slides:
+                    meta = create_document_metadata(
+                        file_name=self.file_path.name,
+                        file_path=str(self.file_path),
+                        page=slide_num,
+                        slide=slide_num,
+                        subject=subject,
+                        content_type=content_type,
+                        source_type=source_type
+                    )
+
                     units.append(
                         {
                             "text": slide_text,
-                            "metadata": {"slide": slide_num},
+                            "metadata": meta,
                         }
                     )
 
             self.logger.info(
-                f"Successfully extracted {len(units)} units from {len(presentation.slides)} slides."
+                f"Successfully extracted {len(units)} units from {len(presentation.slides)} slides (subject: {subject}, content_type: {content_type}, source_type: {source_type})."
             )
 
             return units
