@@ -13,7 +13,12 @@ from core.safety_manager import SafetyManager
 from utils.logger import get_logger
 from core.vector_store import VectorStore
 from config.prompts import QUIZ_SYSTEM_PROMPT, QUIZ_USER_PROMPT
-from config.settings import (RETRIEVAL_TOP_K, QUIZ_MAX_TOKENS, QUIZ_COLLECTION_NAME)
+from config.settings import (
+    RETRIEVAL_TOP_K, 
+    QUIZ_MAX_TOKENS, 
+    QUIZ_COLLECTION_NAME,
+    QUIZ_LLM_MODEL
+)
 
 class QuizService:
     def __init__(self):
@@ -23,7 +28,7 @@ class QuizService:
         self.reranker = Reranker()
         self.relevance_gate = RelevanceGate()
         self.prompt_builder = PromptBuilder()
-        self.llm = LLMClient()
+        self.llm = LLMClient(model=QUIZ_LLM_MODEL)
         self.safety_manager = SafetyManager()
 
     def generate_quiz(self, topic, subject=None, num_questions=None, difficulty=None):
@@ -47,8 +52,8 @@ class QuizService:
                 difficulty=diff_val,
                 num_questions=num_q
             )
-            if bank_questions and len(bank_questions) >= min(3, num_q):
-                self.logger.info(f"Returning {len(bank_questions)} curated questions from quiz_bank collection.")
+            if bank_questions and len(bank_questions) >= num_q:
+                self.logger.info(f"Returning {num_q} curated questions from quiz_bank collection.")
                 sources = self._get_subject_sources(target_subject)
                 return {
                     "topic": sanitized_topic,
@@ -105,8 +110,8 @@ class QuizService:
 
                 scored_docs = self.reranker.score_documents(search_query, retrieved_docs, top_k=30)
                 
-                if subject and sanitized_topic.lower() == subject.lower():
-                    accepted_docs = [doc for doc, _ in scored_docs if doc is not None]
+                if subject:
+                    accepted_docs = [doc for doc, _ in scored_docs if doc is not None][:12]
                     is_relevant = bool(accepted_docs)
                 else:
                     accepted_docs, is_relevant = self.relevance_gate.evaluate_relevance(scored_docs)
@@ -124,8 +129,8 @@ class QuizService:
             num_q = num_questions if num_questions is not None else 5
             diff_val = difficulty if difficulty is not None else "Standard"
 
-            # Dynamic token budget calibrated to question count (prevents 413 TPM overages while guaranteeing full generation)
-            quiz_token_budget = min(QUIZ_MAX_TOKENS, max(1200, num_q * 260))
+            # Dynamic token budget calibrated to question count (guarantees full generation without truncation)
+            quiz_token_budget = min(4096, max(2048, num_q * 400))
 
             # Determine sample size based on question count to cover broad topics without exceeding context limits
             target_chunks = min(12, max(6, num_q + 2))
@@ -164,6 +169,21 @@ class QuizService:
             sanitized_response = self.safety_manager.sanitize_output(raw_response)
 
             questions = self._parse_quiz_json(sanitized_response)
+
+            # Pad questions with bank_questions if generated count is less than requested num_q
+            if bank_questions and len(questions) < num_q:
+                existing_texts = {q.get("question", "").strip().lower() for q in questions}
+                for bq in bank_questions:
+                    if len(questions) >= num_q:
+                        break
+                    bq_text = bq.get("question", "").strip().lower()
+                    if bq_text and bq_text not in existing_texts:
+                        questions.append(bq)
+                        existing_texts.add(bq_text)
+
+            # Re-index sequential question IDs
+            for idx, q in enumerate(questions, 1):
+                q["id"] = idx
 
             # Extract slide and lecture citations specifically from the sampled diversified context
             sources = []
@@ -258,6 +278,48 @@ class QuizService:
             self.logger.info(f"Salvaged {len(extracted_questions)} questions via resilient object extractor.")
             return extracted_questions
 
+        # 5. Fallback: Parse non-JSON markdown formatted quiz questions (e.g. "Q1. ... A) ... B) ...")
+        md_questions = []
+        blocks = re.split(r"(?m)^\s*(?:Q?\d+[\.\)]|\*\*Q?\d+[\.\)]\*\*)\s*", cleaned)
+        for idx, block in enumerate(blocks[1:], 1):
+            lines = [l.strip() for l in block.split("\n") if l.strip()]
+            if not lines:
+                continue
+            q_text = re.sub(r"(?is)^\s*(?:\*\*)?(?:Draft Questions|Mental Refinement|Self-Check|Thinking Process|Analysis|Step \d+):?\s*(?:\*\*)?\s*", "", lines[0]).strip()
+            if not q_text and len(lines) > 1:
+                q_text = lines[1]
+
+            options = []
+            correct_ans = "A"
+            hint = ""
+            explanation = ""
+            for l in lines[1:]:
+                opt_m = re.match(r"^(?:[A-D][\.\)]|\*\*[A-D][\.\)]\*\*)\s*(.*)", l)
+                if opt_m:
+                    options.append(opt_m.group(1).strip())
+                elif "correct" in l.lower() or "answer:" in l.lower():
+                    ans_m = re.search(r"\b([A-D])\b", l.upper())
+                    if ans_m:
+                        correct_ans = ans_m.group(1)
+                elif "hint:" in l.lower():
+                    hint = l.split(":", 1)[-1].strip()
+                elif "explanation:" in l.lower():
+                    explanation = l.split(":", 1)[-1].strip()
+
+            if q_text and len(options) >= 2:
+                md_questions.append({
+                    "id": idx,
+                    "question": q_text,
+                    "options": options[:4],
+                    "correct_answer": correct_ans,
+                    "hint": hint,
+                    "explanation": explanation
+                })
+
+        if md_questions:
+            self.logger.info(f"Parsed {len(md_questions)} questions via markdown fallback parser.")
+            return md_questions
+
         self.logger.warning(f"Could not parse quiz JSON from response. Response snippet: {cleaned[:300]}")
         return []
 
@@ -308,9 +370,9 @@ class QuizService:
         try:
             filters = []
             if subject:
-                filters.append({"subject": subject})
+                filters.append({"subject": {"$eq": subject}})
             if difficulty and difficulty != "Standard":
-                filters.append({"difficulty": difficulty})
+                filters.append({"difficulty": {"$eq": difficulty}})
 
             if len(filters) == 1:
                 where_filter = filters[0]
@@ -324,6 +386,13 @@ class QuizService:
                 include=["documents", "metadatas"]
             )
             metas = res.get("metadatas", [])
+            if not metas and subject and difficulty and difficulty != "Standard":
+                res = self.quiz_store.collection.get(
+                    where={"subject": {"$eq": subject}},
+                    include=["documents", "metadatas"]
+                )
+                metas = res.get("metadatas", [])
+
             if not metas:
                 return []
 
@@ -338,16 +407,16 @@ class QuizService:
                     except Exception:
                         opts = []
 
-                # Extract question text from content if needed
-                q_text = meta.get("question", "")
-                if not q_text and "documents" in res and idx - 1 < len(res["documents"]):
-                    raw_doc = res["documents"][idx - 1]
-                    # strip prefix like "Python Medium ..."
-                    parts = raw_doc.split(" ", 2)
-                    q_text = parts[-1] if len(parts) > 2 else raw_doc
+                # Skip raw un-parsed chunks that lack valid options or structured question text
+                if not isinstance(opts, list) or len(opts) < 2:
+                    continue
+
+                q_text = meta.get("question", "").strip()
+                if not q_text or len(q_text) < 10:
+                    continue
 
                 questions.append({
-                    "id": idx,
+                    "id": len(questions) + 1,
                     "question": q_text,
                     "options": opts,
                     "correct_answer": meta.get("correct_answer", "A"),
