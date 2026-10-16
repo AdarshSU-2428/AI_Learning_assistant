@@ -6,7 +6,7 @@ from core.llm_client import LLMClient
 from core.safety_manager import SafetyManager
 from utils.logger import get_logger
 from config.prompts import LEARNING_SYSTEM_PROMPT, LEARNING_USER_PROMPT
-from config.settings import RETRIEVAL_TOP_K
+from config.settings import RETRIEVAL_TOP_K, CHAT_LLM_MODEL
 
 
 class LearningService:
@@ -16,7 +16,7 @@ class LearningService:
         self.reranker = Reranker()
         self.relevance_gate = RelevanceGate()
         self.prompt_builder = PromptBuilder()
-        self.llm = LLMClient()
+        self.llm = LLMClient(model=CHAT_LLM_MODEL)
         self.safety_manager = SafetyManager()
 
     def chat(self, question, subject=None):
@@ -49,7 +49,11 @@ class LearningService:
 
             scored_docs = self.reranker.score_documents(sanitized_question, retrieved_docs, top_k=20)
 
-            accepted_docs, is_relevant = self.relevance_gate.evaluate_relevance(scored_docs)
+            if subject:
+                accepted_docs = [doc for doc, _ in scored_docs if doc is not None][:12]
+                is_relevant = bool(accepted_docs)
+            else:
+                accepted_docs, is_relevant = self.relevance_gate.evaluate_relevance(scored_docs)
 
             if not is_relevant or not accepted_docs:
                 self.logger.warning("Query rejected by RelevanceGate (out-of-syllabus or low confidence).")
@@ -61,7 +65,7 @@ class LearningService:
                 }
 
             messages = self.prompt_builder.build_messages(
-                LEARNING_SYSTEM_PROMPT, LEARNING_USER_PROMPT, sanitized_question, accepted_docs
+                LEARNING_SYSTEM_PROMPT, LEARNING_USER_PROMPT, sanitized_question, accepted_docs, subject=subject
             )
 
             self.logger.info("Messages built successfully.")

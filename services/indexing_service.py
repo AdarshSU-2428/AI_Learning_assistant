@@ -21,7 +21,9 @@ from config.settings import (
     QUIZ_DATA_PATH, 
     COLLECTION_NAME,
     LAB_COLLECTION_NAME,
-    LAB_DATA_PATH
+    LAB_DATA_PATH,
+    EXAM_COLLECTION_NAME,
+    EXAM_DATA_PATH
 )
 
 class IndexingService:
@@ -40,6 +42,7 @@ class IndexingService:
         self.vector_store = VectorStore(collection_name=COLLECTION_NAME)
         self.quiz_vector_store = VectorStore(collection_name=QUIZ_COLLECTION_NAME)
         self.lab_vector_store = VectorStore(collection_name=LAB_COLLECTION_NAME)
+        self.exam_vector_store = VectorStore(collection_name=EXAM_COLLECTION_NAME)
         self.index_manager = IndexManager()
 
     def _index_document(self, file_path):
@@ -86,8 +89,12 @@ class IndexingService:
 
             is_quiz = "quiz" in file_path.lower() or "\\quiz\\" in file_path.lower() or "/quiz/" in file_path.lower()
             is_lab = "lab" in file_path.lower() or "\\lab\\" in file_path.lower() or "/lab/" in file_path.lower()
-            
+            is_exam = "exam" in file_path.lower() or "\\exam\\" in file_path.lower() or "/exam/" in file_path.lower()
+
+            file_name = os.path.basename(file_path)
+
             if is_quiz:
+                self.quiz_vector_store.delete_by_file(file_name)
                 stored_count = self.quiz_vector_store.store(valid_docs, embeddings)
                 self.index_manager.register_quiz_document(
                     file_path=file_path, 
@@ -96,14 +103,25 @@ class IndexingService:
                 )
 
             elif is_lab:
+                self.lab_vector_store.delete_by_file(file_name)
                 stored_count = self.lab_vector_store.store(valid_docs, embeddings)
                 self.index_manager.register_lab_document(
                     file_path=file_path,
                     document_id=document_id,
                     chunks=stored_count
                 )
+
+            elif is_exam:
+                self.exam_vector_store.delete_by_file(file_name)
+                stored_count = self.exam_vector_store.store(valid_docs, embeddings)
+                self.index_manager.register_exam_document(
+                    file_path=file_path,
+                    document_id=document_id,
+                    chunks=stored_count
+                )
                 
             else:
+                self.vector_store.delete_by_file(file_name)
                 stored_count = self.vector_store.store(valid_docs, embeddings)
                 self.index_manager.register_document(
                     file_path=file_path, 
@@ -142,11 +160,14 @@ class IndexingService:
 
                     is_quiz = "quiz" in file_path.lower() or "\\quiz\\" in file_path.lower() or "/quiz/" in file_path.lower()
                     is_lab = "lab" in file_path.lower() or "\\lab\\" in file_path.lower() or "/lab/" in file_path.lower()
+                    is_exam = "exam" in file_path.lower() or "\\exam\\" in file_path.lower() or "/exam/" in file_path.lower()
 
                     if is_quiz:
                         is_already_indexed = self.index_manager.is_quiz_indexed(file_path)
                     elif is_lab:
                         is_already_indexed = self.index_manager.is_lab_indexed(file_path)
+                    elif is_exam:
+                        is_already_indexed = self.index_manager.is_exam_indexed(file_path)
                     else:
                         is_already_indexed = self.index_manager.is_document_indexed(file_path)
 
@@ -283,3 +304,18 @@ class IndexingService:
             return {"status": "success", "indexed_files": 0, "chunks_stored": 0}
 
         return self.index_directory(target_dir)
+
+    def index_exam_file(self, file_path):
+        self.logger.info(f"Indexing exam file: {file_path}")
+        return self._index_document(file_path)
+
+    def index_exam_directory(self, folder_path=None):
+        target_dir = folder_path or EXAM_DATA_PATH
+        self.logger.info(f"Indexing exam directory: {target_dir}")
+
+        if not os.path.isdir(target_dir):
+            os.makedirs(target_dir, exist_ok=True)
+            return {"status": "success", "indexed_files": 0, "chunks_stored": 0}
+        
+        return self.index_directory(target_dir)
+

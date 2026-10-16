@@ -2,6 +2,7 @@ from services.learning_service import LearningService
 from services.indexing_service import IndexingService
 from services.quiz_service import QuizService
 from services.lab_service import LabService
+from services.exam_service import ExamService
 
 
 class ApplicationService:
@@ -11,12 +12,14 @@ class ApplicationService:
         self.indexing_service = IndexingService()
         self.quiz_service = QuizService()
         self.lab_service = LabService()
+        self.exam_service = ExamService()
 
     def index_documents(self, directory_path):
         notes_res = self.indexing_service.index_directory(directory_path)
         quiz_res = self.indexing_service.index_quiz_directory()
         lab_res = self.indexing_service.index_lab_directory()
-        return {"notes": notes_res, "quiz": quiz_res, "lab": lab_res}
+        exam_res = self.indexing_service.index_exam_directory()
+        return {"notes": notes_res, "quiz": quiz_res, "lab": lab_res, "exam": exam_res}
 
     def chat(self, query, subject=None):
         return self.learning_service.chat(query, subject=subject)
@@ -36,4 +39,10 @@ class ApplicationService:
         return self.quiz_service.evaluate_submission(
             quiz_questions=quiz_questions,
             user_answers=user_answers
+        )
+
+    def generate_exam(self, subject, num_questions=None):
+        return self.exam_service.generate_exam(
+            subject=subject,
+            num_questions=num_questions
         )

@@ -6,7 +6,12 @@ from core.llm_client import LLMClient
 from core.safety_manager import SafetyManager
 from utils.logger import get_logger
 from config.prompts import LAB_SYSTEM_PROMPT, LAB_USER_PROMPT
-from config.settings import RETRIEVAL_TOP_K, LAB_COLLECTION_NAME, COLLECTION_NAME
+from config.settings import (
+    RETRIEVAL_TOP_K, 
+    LAB_COLLECTION_NAME, 
+    COLLECTION_NAME,
+    LAB_LLM_MODEL
+)
 
 
 class LabService:
@@ -17,7 +22,7 @@ class LabService:
         self.reranker = Reranker()
         self.relevance_gate = RelevanceGate()
         self.prompt_builder = PromptBuilder()
-        self.llm = LLMClient()
+        self.llm = LLMClient(model=LAB_LLM_MODEL)
         self.safety_manager = SafetyManager()
 
     def chat(self, question, subject=None):
@@ -46,15 +51,13 @@ class LabService:
                     self.logger.warning(f"Fallback notes retrieval warning: {ne}")
 
             if not retrieved_docs:
-                self.logger.warning("No relevant documents retrieved from lab or course notes.")
+                self.logger.warning("No lab manuals or course notes were retrieved.")
                 return {
                     "query": sanitized_question,
-                    "answer": "I don't have enough information in your course syllabus to answer this practical question accurately.",
+                    "answer": "I'm sorry, but this practical experiment or topic does not appear to be covered in the curriculum syllabus for this subject. Please verify your selected subject in the sidebar or rephrase your question.",
                     "sources": [],
                     "is_relevant": False
                 }
-
-            self.logger.info(f"Retrieved {len(retrieved_docs)} candidate documents for lab query.")
 
             scored_docs = self.reranker.score_documents(sanitized_question, retrieved_docs, top_k=20)
 
@@ -70,7 +73,7 @@ class LabService:
                 }
 
             messages = self.prompt_builder.build_messages(
-                LAB_SYSTEM_PROMPT, LAB_USER_PROMPT, sanitized_question, accepted_docs
+                LAB_SYSTEM_PROMPT, LAB_USER_PROMPT, sanitized_question, accepted_docs, subject=subject
             )
 
             self.logger.info("Lab prompt messages built successfully.")
