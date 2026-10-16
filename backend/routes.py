@@ -1,4 +1,7 @@
+import logging
 from fastapi import APIRouter, HTTPException
+
+logger = logging.getLogger(__name__)
 
 from backend.dependencies import app_service
 from backend.schemas import (
@@ -8,6 +11,8 @@ from backend.schemas import (
     QuizResponse,
     QuizSubmissionRequest,
     QuizSubmissionResponse,
+    ExamGenerateRequest,
+    ExamGenerateResponse
 )
 
 router = APIRouter()
@@ -18,7 +23,7 @@ router = APIRouter()
     response_model=ChatResponse,
     summary="Ask a question to the AI Learning Assistant",
 )
-async def chat(request: ChatRequest):
+def chat(request: ChatRequest):
     try:
         response = app_service.chat(
             request.query, 
@@ -32,10 +37,12 @@ async def chat(request: ChatRequest):
             detail=str(exc),
         )
 
-    except Exception:
+    except Exception as exc:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=500,
-            detail="Internal Server Error",
+            detail=f"Backend processing error: {str(exc)}",
         )
 
 
@@ -44,7 +51,7 @@ async def chat(request: ChatRequest):
     response_model=QuizResponse,
     summary="Generate an interactive multiple-choice quiz",
 )
-async def generate_quiz(request: QuizRequest):
+def generate_quiz(request: QuizRequest):
     try:
         response = app_service.generate_quiz(
             topic=request.topic,
@@ -60,10 +67,12 @@ async def generate_quiz(request: QuizRequest):
             detail=str(exc),
         )
 
-    except Exception:
+    except Exception as exc:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=500,
-            detail="Internal Server Error",
+            detail=f"Backend processing error: {str(exc)}",
         )
 
 
@@ -72,7 +81,7 @@ async def generate_quiz(request: QuizRequest):
     response_model=QuizSubmissionResponse,
     summary="Evaluate student quiz answers and compute score",
 )
-async def evaluate_quiz(request: QuizSubmissionRequest):
+def evaluate_quiz(request: QuizSubmissionRequest):
     try:
         response = app_service.evaluate_quiz_submission(
             quiz_questions=request.quiz_questions,
@@ -86,10 +95,12 @@ async def evaluate_quiz(request: QuizSubmissionRequest):
             detail=str(exc),
         )
 
-    except Exception:
+    except Exception as exc:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=500,
-            detail="Internal Server Error",
+            detail=f"Backend processing error: {str(exc)}",
         )
 
 
@@ -98,7 +109,7 @@ async def evaluate_quiz(request: QuizSubmissionRequest):
     response_model=ChatResponse,
     summary="Ask a practical experiment or coding lab question",
 )
-async def lab_chat(request: ChatRequest):
+def lab_chat(request: ChatRequest):
     try:
         response = app_service.lab_chat(
             request.query, 
@@ -112,8 +123,37 @@ async def lab_chat(request: ChatRequest):
             detail=str(exc),
         )
 
-    except Exception:
+    except Exception as exc:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=500,
-            detail="Internal Server Error",
+            detail=f"Backend processing error: {str(exc)}",
+        )
+
+@router.post(
+    "/exam/generate",
+    response_model=ExamGenerateResponse,
+    summary="Generate a written university examination paper"
+)
+def generate_exam(request: ExamGenerateRequest):
+    try:
+        response = app_service.generate_exam(
+            subject=request.subject,
+            num_questions=request.num_questions
+        )
+        return response
+
+    except ValueError as exc:
+        logger.warning(f"ValueError in generate_exam route: {exc}")
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc)
+        )
+
+    except Exception as exc:
+        logger.error(f"Error in generate_exam route: {exc}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal Server Error: {str(exc)}"
         )

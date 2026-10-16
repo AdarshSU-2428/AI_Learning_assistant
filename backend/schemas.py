@@ -40,3 +40,19 @@ class QuizSubmissionResponse(BaseModel):
     total: int
     percentage: float
     details: list[dict[str, Any]] = []
+
+
+class ExamGenerateRequest(BaseModel):
+    subject: str
+    num_questions: int | None = None
+
+
+class ExamGenerateResponse(BaseModel):
+    subject: str
+    total_marks: int = 0
+    questions: list[dict[str, Any]] = []
+    sources: list[Any] = []
+    is_relevant: bool = True
+    message: str = ""
+
+

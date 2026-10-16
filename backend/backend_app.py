@@ -10,8 +10,6 @@ from config.settings import DOCUMENTS_PATH
 
 @asynccontextmanager
 async def lifespan(app):
-    app_service.index_documents(DOCUMENTS_PATH)
-
     yield
 
 
