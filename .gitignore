@@ -19,3 +19,5 @@ notes/
 data/
 
 knowledge_base/
+
+.pytest_cache/
