@@ -5,19 +5,32 @@ from config.settings import (RERANK_TOP_K, RERANKER_MODEL)
 
 
 class Reranker:
-    def __init__(self, model_name=RERANKER_MODEL):
-        self.logger = get_logger(__name__)
+    _instance = None
 
+    def __new__(cls, model_name=RERANKER_MODEL):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __init__(self, model_name=RERANKER_MODEL):
+        if hasattr(self, "_initialized") and self._initialized:
+            return
+        self._initialized = True
+        self.logger = get_logger(__name__)
         self.model_name = model_name
 
         try:
             self.model = CrossEncoder(self.model_name)
-
             self.logger.info(f"Loaded reranker model: {self.model_name}")
 
         except Exception as e:
-            self.logger.error(f"Failed to load reranker model: {e}")
-            raise
+            self.logger.warning(f"Online loading failed for reranker ({e}), attempting local cache fallback...")
+            try:
+                self.model = CrossEncoder(self.model_name, local_files_only=True)
+                self.logger.info(f"Loaded reranker model from local cache: {self.model_name}")
+            except Exception:
+                self.logger.error(f"Failed to load reranker model: {e}")
+                raise
 
     def score_documents(self, query, documents, top_k=RERANK_TOP_K):
         self.logger.info("Starting candidate document scoring...")
@@ -32,7 +45,7 @@ class Reranker:
 
             pairs = [[query, document.page_content] for document in documents]
 
-            scores = self.model.predict(pairs)
+            scores = self.model.predict(pairs, batch_size=16, show_progress_bar=False)
 
             import math
             def _sigmoid(x):

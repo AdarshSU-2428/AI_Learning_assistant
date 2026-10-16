@@ -5,17 +5,32 @@ from utils.logger import get_logger
 from config.settings import EMBEDDING_MODEL
 
 
-class EmbeddingModel :
-    def __init__(self, model_name=EMBEDDING_MODEL) :
+class EmbeddingModel:
+    _instance = None
+
+    def __new__(cls, model_name=EMBEDDING_MODEL):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __init__(self, model_name=EMBEDDING_MODEL):
+        if hasattr(self, "_initialized") and self._initialized:
+            return
+        self._initialized = True
         self.logger = get_logger(__name__)
         self.model_name = model_name
 
-        try :
+        try:
             self.model = SentenceTransformer(self.model_name)
             self.logger.info(f"Loaded embedding model: {self.model_name}")
         except Exception as e:
-            self.logger.error(f"Error loading embedding model: {e}")
-            raise
+            self.logger.warning(f"Online loading failed for embedding model ({e}), attempting local cache fallback...")
+            try:
+                self.model = SentenceTransformer(self.model_name, local_files_only=True)
+                self.logger.info(f"Loaded embedding model from local cache: {self.model_name}")
+            except Exception:
+                self.logger.error(f"Error loading embedding model: {e}")
+                raise
 
     def generate_embeddings(self, documents):
         self.logger.info("Starting embedding generation...")

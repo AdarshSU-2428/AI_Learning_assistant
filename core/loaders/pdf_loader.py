@@ -32,13 +32,13 @@ class PDFLoader(BaseLoader):
             total_digital_words = sum(len(txt.split()) for _, txt, _ in digital_pages)
             avg_digital_words = total_digital_words / len(digital_pages) if digital_pages else 0
 
-            # Pass 2: Trigger OCR ONLY if the document is genuinely a scanned PDF (avg words < 15)
-            is_scanned_pdf = avg_digital_words < 15
-            if is_scanned_pdf:
+            # Pass 2: Trigger OCR if the document is scanned or handwritten (avg words < 40)
+            is_scanned_pdf = avg_digital_words < 40
+            if is_scanned_pdf and content_type == "notes":
                 source_type = "handwritten_notes"
 
             for page_num, clean_text, page in digital_pages:
-                if is_scanned_pdf and (not clean_text or len(clean_text) < 15):
+                if is_scanned_pdf:
                     if hasattr(page, "images") and page.images:
                         ocr_parts = []
                         for img in page.images:

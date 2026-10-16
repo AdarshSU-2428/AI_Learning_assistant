@@ -47,10 +47,62 @@ class SafetyManager:
             self.logger.warning("Empty response passed to sanitizer.")
             return ""
 
+        # 1. Clean thinking blocks (<think>...</think> or unclosed <think>...)
+        if "<think>" in response_text:
+            if "</think>" in response_text:
+                cleaned = re.sub(r"(?is)<think>.*?</think>", "", response_text)
+            else:
+                match = re.search(r"(?m)^(#{1,6}\s|\*\*|\d+\.\s|Definition|Solve|Consider|The\s|In\s|Based\s)", response_text)
+                if match:
+                    cleaned = response_text[match.start():]
+                else:
+                    cleaned = re.sub(r"(?is)^<think>.*?\n", "", response_text)
+        else:
+            cleaned = response_text
+
+        cleaned = cleaned.strip()
+
+        # 2. Clean any numbered reasoning steps (e.g. "1. **Analyze...", "2. **Scan...", "3. **Check...")
+        reasoning_pattern = r"(?is)^(?:\d+\.\s*\*\*(?:Analyze|Scan|Check|Extract|User).*?\n\n|Here's a thinking process:.*?\n\n)"
+        while re.match(reasoning_pattern, cleaned):
+            cleaned = re.sub(reasoning_pattern, "", cleaned).strip()
+
+        # 3. Remove standalone or trailing single-backslash lines
+        cleaned = re.sub(r"^\s*\\+\s*$", "", cleaned, flags=re.MULTILINE)
+        cleaned = re.sub(r"(?<!\\)\\\s*$", "", cleaned, flags=re.MULTILINE)
+
+        # 4. Recursively unbox any \boxed{content}
+        while "\\boxed{" in cleaned:
+            idx = cleaned.find("\\boxed{")
+            depth = 1
+            curr = idx + len("\\boxed{")
+            while curr < len(cleaned) and depth > 0:
+                if cleaned[curr] == "{":
+                    depth += 1
+                elif cleaned[curr] == "}":
+                    depth -= 1
+                curr += 1
+            if depth == 0:
+                inside = cleaned[idx + len("\\boxed{") : curr - 1]
+                cleaned = cleaned[:idx] + " " + inside + " " + cleaned[curr:]
+            else:
+                break
+
+        # 5. Convert brackets around LaTeX equations [ h_i(x)=0 ] into $$ ... $$
+        latex_cmds = r"\\(?:mu|lambda|nabla|partial|frac|sum|int|infty|le|ge|cdot|begin|text|alpha|beta|gamma)"
         cleaned = re.sub(
-            r"(?is)<think>.*?(</think>|$)",
-            "",
-            response_text
+            r"\[\s*(\\.*?" + latex_cmds + r".*?)\s*\]",
+            lambda m: f"\n$$\n{m.group(1).strip()}\n$$\n",
+            cleaned,
+            flags=re.DOTALL
         )
 
-        return cleaned.strip()
+        # 6. Wrap any unwrapped \begin{env} ... \end{env} in $$ ... $$
+        cleaned = re.sub(
+            r"(?<!\$\$)\s*(\\begin\{(?:aligned|cases|array|matrix|bmatrix|equation)\}.*?\\end\{(?:aligned|cases|array|matrix|bmatrix|equation)\})\s*(?!\$\$)",
+            lambda m: f"\n$$\n{m.group(1).strip()}\n$$\n",
+            cleaned,
+            flags=re.DOTALL
+        )
+
+        return cleaned

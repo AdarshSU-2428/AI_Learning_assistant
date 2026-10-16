@@ -19,28 +19,31 @@ class RelevanceGate:
 
             top_score = float(scored_documents[0][1])
 
-            # Noise floor threshold (out-of-syllabus baking cake queries score < 0.00001)
-            if top_score < 0.00005:
+            # Noise floor threshold (out-of-subject / irrelevant queries score < 0.0001)
+            if top_score < 0.0001:
                 self.logger.info(f"Top candidate score ({top_score:.6f}) below noise floor. Query rejected.")
                 return [], False
 
             is_ocr_doc = any(
-                doc.metadata.get("source_type") == "handwritten_notes"
-                or "DMS_" in str(doc.metadata.get("file_name", "")).upper()
-                or "OT_" in str(doc.metadata.get("file_name", "")).upper()
+                doc.metadata.get("source_type") in ("handwritten_notes", "pyq_paper", "notes")
+                or "PYQ" in str(doc.metadata.get("file_name", "")).upper()
+                or "DMS" in str(doc.metadata.get("file_name", "")).upper()
+                or "OT" in str(doc.metadata.get("file_name", "")).upper()
+                or "HANDWRITTEN" in str(doc.metadata.get("file_name", "")).upper()
+                or "SCAN" in str(doc.metadata.get("file_name", "")).upper()
                 for doc, _ in scored_documents[:5]
             )
 
-            if is_ocr_doc and top_score < 0.20:
+            if is_ocr_doc or top_score < 0.20:
                 self.logger.info("Handwritten OCR resilience active: Accepting top candidate OCR documents.")
                 accepted_documents = [doc for doc, score in scored_documents[:12]]
             elif top_score >= 0.20:
                 accepted_documents = [
                     doc for doc, score in scored_documents[:12] if score >= 0.05
                 ]
-            elif top_score >= 0.001:
+            elif top_score >= 0.0001:
                 accepted_documents = [
-                    doc for doc, score in scored_documents[:12] if score >= 0.001
+                    doc for doc, score in scored_documents[:12] if score >= 0.0001
                 ]
             else:
                 accepted_documents = [

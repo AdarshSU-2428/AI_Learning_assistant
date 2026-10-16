@@ -10,11 +10,11 @@ from config.settings import (
 )
 
 class LLMClient:
-    def __init__(self):
+    def __init__(self, model=None):
         self.logger = get_logger(__name__)
 
         self.client = Groq(api_key=GROQ_API_KEY)
-        self.model = LLM_MODEL
+        self.model = model or LLM_MODEL
 
         self.logger.info(
             "LLM Client initialized successfully "
@@ -52,15 +52,21 @@ class LLMClient:
                     f"Message at index {index} values for 'role' and 'content' cannot be empty or blank."
                 )
 
-    def generate_response(self, messages, max_tokens=None):
+    def generate_response(self, messages, model=None, max_tokens=None):
         self._validate_messages(messages)
 
-        effective_max_tokens = max_tokens if max_tokens is not None else LLM_MAX_TOKENS
+        requested_tokens = max_tokens if max_tokens is not None else LLM_MAX_TOKENS
+        effective_max_tokens = min(requested_tokens, 4096)
+        target = model or self.model or "qwen/qwen3.8-27b"
 
-        self.logger.info(f"Generating LLM response (max_tokens: {effective_max_tokens})...")
-
-        fallback_models = [self.model, "llama-3.3-70b-versatile", "llama-3.1-8b-instant", "gemma2-9b-it"]
+        fallback_models = [
+            target,
+            "qwen/qwen3.8-27b",
+            "openai/gpt-oss-120b",
+            "openai/gpt-oss-20b"
+        ]
         seen_models = set()
+        last_error = None
 
         for current_model in fallback_models:
             if current_model in seen_models:
@@ -81,13 +87,17 @@ class LLMClient:
                 return answer
 
             except Exception as e:
+                last_error = e
                 err_str = str(e)
-                if "429" in err_str or "rate_limit" in err_str or "decommissioned" in err_str or "400" in err_str:
-                    self.logger.warning(f"Model {current_model} unavailable or rate-limited ({e}). Trying next fallback model...")
-                    continue
+                if "429" in err_str or "rate_limit" in err_str:
+                    self.logger.warning(f"Model {current_model} rate-limited (HTTP 429). Trying next fallback model...")
                 else:
-                    self.logger.exception(f"Failed to generate response from LLM using {current_model}.")
-                    raise
+                    self.logger.warning(f"Model {current_model} call failed ({e}). Trying next fallback model...")
+                continue
 
-        raise RuntimeError("All LLM models exhausted due to rate limits.")
-    
+        self.logger.error(f"Failed to generate response from LLM. All fallback models failed. Last error: {last_error}")
+        if last_error and ("429" in str(last_error) or "rate_limit" in str(last_error)):
+            raise ValueError(
+                "Groq API rate limit reached. Please wait a minute or add a new GROQ_API_KEY in your .env file."
+            )
+        raise ValueError(f"Groq API call failed across all models. Last error: {last_error}")
